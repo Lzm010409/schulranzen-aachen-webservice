@@ -1,6 +1,7 @@
 package lukegoll.schulranzen.aachen.webservices.views.kunden;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -9,16 +10,14 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.component.textfield.TextField;
 import lukegoll.schulranzen.aachen.webservices.data.KundenDataService;
-import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
+import lukegoll.schulranzen.aachen.webservices.data.entity.Kunden;
 import lukegoll.schulranzen.aachen.webservices.list.InputForm;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
-
-import java.awt.*;
 
 @PageTitle("Kunden")
 @Route(value = "kunden", layout = MainLayout.class)
 public class KundenView extends VerticalLayout {
-    Grid<Kunde> grid = new Grid<>(Kunde.class);
+    Grid<Kunden> grid = new Grid<>(Kunden.class);
     KundenDataService kundenDataService;
     TextField filterText = new TextField();
     InputForm form;
@@ -29,11 +28,11 @@ public class KundenView extends VerticalLayout {
         setSizeFull();
         configureGrid();
         configureForm();
-
-        add(getContent());
+        add(getToolbar(), getContent());
         updateList();
-    }
+        closeEditor();
 
+    }
 
 
     private Component getContent() {
@@ -49,18 +48,70 @@ public class KundenView extends VerticalLayout {
     private void configureGrid() {
         grid.addClassNames("contact-grid");
         grid.setSizeFull();
-        grid.setColumns("id", "vorname", "nachname", "adresse", "plz", "stadt", "klasse", "mail", "tel");
+        grid.setColumns("id", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
         grid.getColumns().forEach(col -> col.setAutoWidth(true));
+        grid.asSingleSelect().addValueChangeListener(event -> editKunde(event.getValue()));
     }
 
 
     private void configureForm() {
         form = new InputForm();
         form.setWidth("25em");
+        form.addListener(InputForm.SaveEvent.class, this::saveKunde);
+        form.addListener(InputForm.DeleteEvent.class, this::deleteKunde);
+        form.addListener(InputForm.CloseEvent.class, event -> closeEditor());
+    }
+
+    private HorizontalLayout getToolbar() {
+        filterText.setPlaceholder("Nach Namen filtern...");
+        filterText.setVisible(true);
+        filterText.setValueChangeMode(ValueChangeMode.LAZY);
+        filterText.addValueChangeListener(event -> updateList());
+
+        Button addKunde = new Button("Add Kunde");
+        addKunde.addClickListener(event -> addKunde());
+
+        HorizontalLayout toolbar = new HorizontalLayout(filterText, addKunde);
+        toolbar.addClassName("toolbar");
+        return toolbar;
+    }
+
+    private void deleteKunde(InputForm.DeleteEvent event) {
+        kundenDataService.deleteKunde(event.getKunde());
+        updateList();
+        closeEditor();
+    }
+
+    private void saveKunde(InputForm.SaveEvent event) {
+        kundenDataService.saveKunde(event.getKunde());
+        updateList();
+        closeEditor();
     }
 
     private void updateList() {
         grid.setItems(kundenDataService.findAllKunden(filterText.getValue()));
+    }
+
+
+    private void closeEditor() {
+        form.setKunde(null);
+        form.setVisible(false);
+        removeClassName("editing");
+    }
+
+    private void editKunde(Kunden kunde) {
+        if (kunde == null) {
+            closeEditor();
+        } else {
+            form.setKunde(kunde);
+            form.setVisible(true);
+            addClassName("editing");
+        }
+    }
+
+    private void addKunde() {
+        grid.asSingleSelect().clear();
+        editKunde(new Kunden());
     }
 
 

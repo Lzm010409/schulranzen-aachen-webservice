@@ -5,7 +5,7 @@ import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 
 @Entity
-public class Kunde extends AbstractEntity {
+public class Kunden extends AbstractEntity {
     @NotBlank
     private String vorname;
 
@@ -16,13 +16,13 @@ public class Kunde extends AbstractEntity {
     private String adresse;
 
     @NotBlank
-    private int plz;
+    private String plz;
 
     @NotBlank
     private String stadt;
 
     @NotBlank
-    private int klasse;
+    private String klasse;
 
     @Email
     @NotBlank
@@ -56,11 +56,11 @@ public class Kunde extends AbstractEntity {
         this.adresse = adresse;
     }
 
-    public int getPlz() {
+   public String getPlz() {
         return plz;
     }
 
-    public void setPlz(int plz) {
+    public void setPlz(String plz) {
         this.plz = plz;
     }
 
@@ -72,11 +72,11 @@ public class Kunde extends AbstractEntity {
         this.stadt = stadt;
     }
 
-    public int getKlasse() {
+    public String getKlasse() {
         return klasse;
     }
 
-    public void setKlasse(int klasse) {
+    public void setKlasse(String klasse) {
         this.klasse = klasse;
     }
 
