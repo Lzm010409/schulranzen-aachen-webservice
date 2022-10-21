@@ -14,6 +14,7 @@ import lukegoll.schulranzen.aachen.webservices.components.appnav.AppNav;
 import lukegoll.schulranzen.aachen.webservices.components.appnav.AppNavItem;
 import lukegoll.schulranzen.aachen.webservices.views.home.HomeView;
 import lukegoll.schulranzen.aachen.webservices.views.kunden.KundenView;
+import lukegoll.schulranzen.aachen.webservices.views.mail.MailView;
 
 /**
  * The main view is a top-level placeholder for other views.
@@ -55,6 +56,7 @@ public class MainLayout extends AppLayout {
 
         nav.addItem(new AppNavItem("Home", HomeView.class, "la la-globe"));
         nav.addItem(new AppNavItem("Kunden", KundenView.class, "la la-file"));
+        nav.addItem(new AppNavItem("Mail", MailView.class, "la la-file"));
 
         return nav;
     }
