@@ -14,11 +14,18 @@ public class KundenDataService {
 
     }
 
-    public List<Kunden> findAllKunden(String stringFilter) {
+    public List<Kunden> findAllKundenWithName(String stringFilter) {
         if (stringFilter == null || stringFilter.isEmpty()) {
             return kundeRepository.findAll();
         } else {
-            return kundeRepository.search(stringFilter);
+            return kundeRepository.searchName(stringFilter);
+        }
+    }
+    public List<Kunden> findAllKundenWithKlasse(String stringFilter) {
+        if (stringFilter == null || stringFilter.isEmpty()) {
+            return kundeRepository.findAll();
+        } else {
+            return kundeRepository.searchKlasse(stringFilter);
         }
     }
 

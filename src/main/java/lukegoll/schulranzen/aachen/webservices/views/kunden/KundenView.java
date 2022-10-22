@@ -11,7 +11,9 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.component.textfield.TextField;
 import lukegoll.schulranzen.aachen.webservices.data.KundenDataService;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunden;
+import lukegoll.schulranzen.aachen.webservices.data.repository.KundeRepository;
 import lukegoll.schulranzen.aachen.webservices.list.InputForm;
+import lukegoll.schulranzen.aachen.webservices.list.KundenGrid;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
 
 @PageTitle("Kunden")
@@ -49,7 +51,7 @@ public class KundenView extends VerticalLayout {
     public void configureGrid() {
         grid.addClassNames("contact-grid");
         grid.setSizeFull();
-        grid.setColumns("id", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
+        grid.setColumns("klasse", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
         grid.getColumns().forEach(col -> col.setAutoWidth(true));
         grid.asSingleSelect().addValueChangeListener(event -> editKunde(event.getValue()));
     }
@@ -90,7 +92,7 @@ public class KundenView extends VerticalLayout {
     }
 
     public void updateList() {
-        grid.setItems(kundenDataService.findAllKunden(filterText.getValue()));
+        grid.setItems(kundenDataService.findAllKundenWithName(filterText.getValue()));
     }
 
 
