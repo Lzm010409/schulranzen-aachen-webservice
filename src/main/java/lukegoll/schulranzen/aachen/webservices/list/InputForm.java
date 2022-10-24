@@ -8,18 +8,16 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.textfield.IntegerField;
-import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.BeanValidationBinder;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.shared.Registration;
-import lukegoll.schulranzen.aachen.webservices.data.entity.Kunden;
+import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
 
 public class InputForm extends FormLayout {
-    Binder<Kunden> binder = new BeanValidationBinder<>(Kunden.class);
-    private Kunden kunde;
+    Binder<Kunde> binder = new BeanValidationBinder<>(Kunde.class);
+    private Kunde kunde;
     TextField vorname = new TextField("Vorname");
     TextField nachname = new TextField("Nachname");
     TextField adresse = new TextField("Adresse");
@@ -57,33 +55,33 @@ public class InputForm extends FormLayout {
     }
 
     public static abstract class KundeFormEvent extends ComponentEvent<InputForm> {
-        private Kunden kunde;
+        private Kunde kunde;
 
-        protected KundeFormEvent(InputForm source, Kunden kunde) {
+        protected KundeFormEvent(InputForm source, Kunde kunde) {
             super(source, false);
             this.kunde = kunde;
         }
 
-        public Kunden getKunde() {
+        public Kunde getKunde() {
             return this.kunde;
         }
     }
 
 
-    public void setKunde(Kunden kunde) {
+    public void setKunde(Kunde kunde) {
         this.kunde = kunde;
         binder.readBean(kunde);
     }
 
 
     public static class SaveEvent extends KundeFormEvent {
-        SaveEvent(InputForm source, Kunden kunde) {
+        SaveEvent(InputForm source, Kunde kunde) {
             super(source, kunde);
         }
     }
 
     public static class DeleteEvent extends KundeFormEvent {
-        DeleteEvent(InputForm source, Kunden kunde) {
+        DeleteEvent(InputForm source, Kunde kunde) {
             super(source, kunde);
         }
 

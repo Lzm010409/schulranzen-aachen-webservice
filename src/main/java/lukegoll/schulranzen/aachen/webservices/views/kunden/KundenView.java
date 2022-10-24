@@ -10,16 +10,14 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.component.textfield.TextField;
 import lukegoll.schulranzen.aachen.webservices.data.KundenDataService;
-import lukegoll.schulranzen.aachen.webservices.data.entity.Kunden;
-import lukegoll.schulranzen.aachen.webservices.data.repository.KundeRepository;
+import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
 import lukegoll.schulranzen.aachen.webservices.list.InputForm;
-import lukegoll.schulranzen.aachen.webservices.list.KundenGrid;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
 
 @PageTitle("Kunden")
 @Route(value = "kunden", layout = MainLayout.class)
 public class KundenView extends VerticalLayout {
-    Grid<Kunden> grid = new Grid<>(Kunden.class);
+    Grid<Kunde> grid = new Grid<>(Kunde.class);
     KundenDataService kundenDataService;
     TextField filterText = new TextField();
     InputForm form;
@@ -102,7 +100,7 @@ public class KundenView extends VerticalLayout {
         removeClassName("editing");
     }
 
-    public void editKunde(Kunden kunde) {
+    public void editKunde(Kunde kunde) {
         if (kunde == null) {
             closeEditor();
         } else {
@@ -114,15 +112,15 @@ public class KundenView extends VerticalLayout {
 
     public void addKunde() {
         grid.asSingleSelect().clear();
-        editKunde(new Kunden());
+        editKunde(new Kunde());
     }
 
 
-    public Grid<Kunden> getGrid() {
+    public Grid<Kunde> getGrid() {
         return grid;
     }
 
-    public void setGrid(Grid<Kunden> grid) {
+    public void setGrid(Grid<Kunde> grid) {
         this.grid = grid;
     }
 

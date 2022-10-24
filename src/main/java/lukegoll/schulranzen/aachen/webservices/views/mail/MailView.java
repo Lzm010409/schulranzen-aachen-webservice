@@ -11,27 +11,26 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import lukegoll.schulranzen.aachen.webservices.data.KundenDataService;
 import lukegoll.schulranzen.aachen.webservices.data.KundenMailDataService;
-import lukegoll.schulranzen.aachen.webservices.data.entity.Kunden;
-import lukegoll.schulranzen.aachen.webservices.list.InputForm;
+import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
 import lukegoll.schulranzen.aachen.webservices.list.MailForm;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @PageTitle("Mail")
 @Route(value = "mail", layout = MainLayout.class)
 public class MailView extends VerticalLayout {
-    Grid<Kunden> grid = new Grid<>(Kunden.class);
-    Grid<Kunden> grid2 = new Grid<>(Kunden.class);
+    Grid<Kunde> grid = new Grid<>(Kunde.class);
+    Grid<Kunde> grid2 = new Grid<>(Kunde.class);
     KundenDataService kundenDataService;
     KundenMailDataService kundenMailDataService;
+    Set<Kunde> kundenSet;
+    Kunde kundenList;
 
     MailForm mailForm;
 
     TextField filterText = new TextField();
-    List<Kunden> liste = new ArrayList<>();
+    List<Kunde> liste = new ArrayList<>();
 
     public MailView(KundenDataService kundenDataService) {
         this.kundenDataService = kundenDataService;
@@ -63,6 +62,7 @@ public class MailView extends VerticalLayout {
         grid.getColumns().forEach(col -> col.setAutoWidth(true));
         grid.setSelectionMode(Grid.SelectionMode.MULTI);
         grid.addSelectionListener(selectionEvent -> uebertrageKundenData(selectionEvent.getAllSelectedItems()));
+        grid.addSelectionListener(selectionEvent -> editMail(selectionEvent.getAllSelectedItems()));
     }
 
     public void configureGridSelectedKunden() {
@@ -84,32 +84,52 @@ public class MailView extends VerticalLayout {
 
     public HorizontalLayout getToolbarBottom() {
         Button mail = new Button("Mails versenden");
-        //mail.addClickListener(buttonClickEvent -> openMailForm());
+        mail.addClickListener(buttonClickEvent -> addMail());
         HorizontalLayout content = new HorizontalLayout(mail);
         return content;
     }
+
+    private void addMail() {
+        grid2.asSingleSelect().clear();
+        editMail(this.kundenSet);
+    }
+
+    private void editMail(Set<Kunde> kundenSet) {
+        if (kundenSet.isEmpty()) {
+            closeEditor();
+        } else {
+
+            Object[] arr = new Kunde[Math.toIntExact(kundenDataService.countKunde())];
+            arr = kundenSet.toArray();
+            for (int i = 0; i < arr.length; i++) {
+                mailForm.setMailAdress((Kunde) arr[i]);
+            }
+            //mailForm.setMailAdress2(arr);
+
+            mailForm.setVisible(true);
+            addClassName("editing");
+
+
+        }
+    }
+
     public void configureMailForm() {
         mailForm = new MailForm();
         mailForm.setWidth("25em");
-       // mailForm.addListener(MailForm.SaveEvent.class, this::saveKunde);
-       // mailForm.addListener(InputForm.CloseEvent.class, event -> closeEditor());
+        // mailForm.addListener(MailForm.SaveEvent.class, this::saveKunde);
+        // mailForm.addListener(InputForm.CloseEvent.class, event -> closeEditor());
     }
-  /*  public void closeEditor() {
-      //  mailForm.setKunde(null);
+
+    public void closeEditor() {
+        mailForm.setMailAdress(null);
         mailForm.setVisible(false);
         removeClassName("editing");
-    }*/
-
-    private void openMailForm() {
-        editMailForm();
     }
 
-    private void editMailForm() {
-        mailForm.setVisible(true);
-    }
 
-    private void uebertrageKundenData(Set<Kunden> kundenSet) {
+    private void uebertrageKundenData(Set<Kunde> kundenSet) {
         grid2.setItems(kundenSet);
+        this.kundenSet = kundenSet;
 
 
     }
@@ -123,11 +143,11 @@ public class MailView extends VerticalLayout {
         updateList();
     }*/
 
-    public Grid<Kunden> getGrid() {
+    public Grid<Kunde> getGrid() {
         return grid;
     }
 
-    public void setGrid(Grid<Kunden> grid) {
+    public void setGrid(Grid<Kunde> grid) {
         this.grid = grid;
     }
 
