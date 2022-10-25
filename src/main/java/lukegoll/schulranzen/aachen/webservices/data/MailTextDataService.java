@@ -1,23 +1,23 @@
 package lukegoll.schulranzen.aachen.webservices.data;
 
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
-import lukegoll.schulranzen.aachen.webservices.data.repository.KundenMailRepository;
+import lukegoll.schulranzen.aachen.webservices.data.repository.MailTextRepository;
 
 import java.util.List;
 
-public class KundenMailDataService {
-    private final KundenMailRepository kundenMailRepository;
+public class MailTextDataService {
+    private final MailTextRepository mailTextRepository;
 
-    public KundenMailDataService(KundenMailRepository kundenMailRepository) {
-        this.kundenMailRepository = kundenMailRepository;
+    public MailTextDataService(MailTextRepository kundenMailRepository) {
+        this.mailTextRepository = kundenMailRepository;
 
     }
     public List<Kunde> findAllKunden(String stringFilter) {
-        return kundenMailRepository.findAll();
+        return mailTextRepository.findAll();
     }
 
     public void deleteKunde(Kunde kunde) {
-        kundenMailRepository.delete(kunde);
+        mailTextRepository.delete(kunde);
     }
 
     public void saveKunde(Kunde kunde) {
@@ -25,6 +25,6 @@ public class KundenMailDataService {
             System.err.println("Contact is null. Are you sure you have connected your form to the application?");
             return;
         }
-        kundenMailRepository.save(kunde);
+        mailTextRepository.save(kunde);
     }
 }

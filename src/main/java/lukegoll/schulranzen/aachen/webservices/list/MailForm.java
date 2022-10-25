@@ -1,6 +1,8 @@
 package lukegoll.schulranzen.aachen.webservices.list;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.ComponentEvent;
+import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -10,21 +12,22 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.BeanValidationBinder;
 import com.vaadin.flow.data.binder.Binder;
+import com.vaadin.flow.data.binder.ValidationException;
+import com.vaadin.flow.shared.Registration;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
-import lukegoll.schulranzen.aachen.webservices.data.entity.MailListe;
+import lukegoll.schulranzen.aachen.webservices.data.entity.MailText;
 
 import java.util.List;
 
 public class MailForm extends FormLayout {
 
-    Binder<Kunde> binder = new BeanValidationBinder<>(Kunde.class);
-    Binder<MailListe> mailBinder = new BeanValidationBinder<>(MailListe.class);
+    // Binder<MailText> binder = new BeanValidationBinder<>(MailText.class);
+    Binder<TextArea> mailBinder = new BeanValidationBinder<>(TextArea.class);
 
-    private Kunde kunde;
     List<Kunde> kundenList;
-    private String mailList;
+    private MailText mailText;
 
-    TextField mails = new TextField("E-Mail Adressen");
+    //TextField mails = new TextField("E-Mail Adressen");
     TextArea text = new TextArea("Inhalt der Mail");
 
 
@@ -33,9 +36,8 @@ public class MailForm extends FormLayout {
 
     public MailForm() {
         addClassName("contact-form");
-      //  mailBinder.forField(mails).bind(MailListe::getKunde, MailListe::setKunde);
-        binder.forField(mails).bind(Kunde::getMail,Kunde::setMail);
-        add(mails, text,
+        mailBinder.forField(text).bind(TextArea::getValue, TextArea::setValue);
+        add(text,
                 createButtonsLayout());
     }
 
@@ -46,12 +48,49 @@ public class MailForm extends FormLayout {
         sendMails.addClickShortcut(Key.ENTER);
         cancel.addClickShortcut(Key.ESCAPE);
 
+        sendMails.addClickListener(buttonClickEvent -> sendMail());
         // sendMails.addClickListener(event -> validateAndSave());
         //cancel.addClickListener(event -> fireEvent(new CloseEvent(this)));
 
         //binder.addStatusChangeListener(e -> save.setEnabled(binder.isValid()));
         return new HorizontalLayout(sendMails, cancel);
     }
+
+    private void sendMail() {
+        try {
+            mailBinder.writeBean(text);
+            fireEvent(new SendEvent(this, mailText.getText()));
+        } catch (ValidationException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public static abstract class MailFormEvent extends ComponentEvent<MailForm> {
+        private String text;
+
+        protected MailFormEvent(MailForm source, String text) {
+            super(source, false);
+            this.text = text;
+        }
+
+        public String getText() {
+            return this.text;
+        }
+    }
+
+    public static class SendEvent extends MailFormEvent {
+        SendEvent(MailForm source, String text) {
+            super(source, text);
+        }
+    }
+
+    public MailText getMailText() {
+        return this.mailText;
+    }
+
+
+
 
    /*public static abstract class KundeFormEvent extends ComponentEvent<MailForm> {
         private Kunden kunde;
@@ -67,92 +106,18 @@ public class MailForm extends FormLayout {
     }*/
 
 
-    public void setMailAdress(Kunde kunde) {
-
-       /* String mailList = "";
-        for (int i = 0; i < kundenList.length; i++) {
-            if (i+1 == kundenList.length) {
-                mailList += kundenList[i];
-            } else {
-                mailList += kundenList[i] + ", ";
-            }
-        }*/
-        this.kunde=kunde;
-        binder.readBean(kunde);
+    public <T extends ComponentEvent<?>> Registration addListener(Class<T> eventType,
+                                                                  ComponentEventListener<T> listener) {
+        return getEventBus().addListener(eventType, listener);
     }
 
-    /*public void setMailAdress2(Object[]arr) {
 
-        mailList = "";
-        for (int i = 0; i < arr.length; i++) {
-            this.kunde=(Kunde)arr[i];
-            if (i+1 == arr.length) {
-                mailList += kunde.getMail();
-            } else {
-                mailList +=kunde.getMail() + ", ";
-            }
-        }
-
-        mailBinder.readBean(mailList);
-    }*/
-
-    /*
-        public static class SaveEvent extends KundeFormEvent {
-            SaveEvent(MailForm source, Kunden kunde) {
-                super(source, kunde);
-            }
-        }
-
-        public static class DeleteEvent extends KundeFormEvent {
-            DeleteEvent(MailForm source, Kunden kunde) {
-                super(source, kunde);
-            }
-
-        }
-
-        public static class CloseEvent extends KundeFormEvent {
-            CloseEvent(MailForm source) {
-                super(source, null);
-            }
-        }
-
-        public <T extends ComponentEvent<?>> Registration addListener(Class<T> eventType,
-                                                                      ComponentEventListener<T> listener) {
-            return getEventBus().addListener(eventType, listener);
-        }
-
-        private void validateAndSave() {
-            try {
-                binder.writeBean(kunde);
-                fireEvent(new SaveEvent(this, kunde));
-
-            } catch (ValidationException e) {
-                e.printStackTrace();
-            }
-        }
-    */
-    public Binder<Kunde> getBinder() {
-        return binder;
+    public String getText() {
+        return text.getValue();
     }
 
-    public void setBinder(Binder<Kunde> binder) {
-        this.binder = binder;
-    }
-
-    public TextField getMails() {
-        return mails;
-    }
-
-    public void setMails(TextField mails) {
-        this.mails = mails;
-    }
-
-    public TextArea getText() {
-        return text;
-    }
-
-    public void setText(TextArea text) {
-        this.text = text;
+    public void setText(String text) {
+        this.text.setValue(text);
     }
 
     public Button getSendMails() {

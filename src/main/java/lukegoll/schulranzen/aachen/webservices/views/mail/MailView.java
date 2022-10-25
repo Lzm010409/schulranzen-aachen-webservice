@@ -1,7 +1,6 @@
 package lukegoll.schulranzen.aachen.webservices.views.mail;
 
 import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -10,8 +9,10 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import lukegoll.schulranzen.aachen.webservices.data.KundenDataService;
-import lukegoll.schulranzen.aachen.webservices.data.KundenMailDataService;
+import lukegoll.schulranzen.aachen.webservices.data.MailTextDataService;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
+import lukegoll.schulranzen.aachen.webservices.data.entity.MailText;
+import lukegoll.schulranzen.aachen.webservices.list.InputForm;
 import lukegoll.schulranzen.aachen.webservices.list.MailForm;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
 
@@ -23,9 +24,8 @@ public class MailView extends VerticalLayout {
     Grid<Kunde> grid = new Grid<>(Kunde.class);
     Grid<Kunde> grid2 = new Grid<>(Kunde.class);
     KundenDataService kundenDataService;
-    KundenMailDataService kundenMailDataService;
+    MailTextDataService kundenMailDataService;
     Set<Kunde> kundenSet;
-    Kunde kundenList;
 
     MailForm mailForm;
 
@@ -39,7 +39,7 @@ public class MailView extends VerticalLayout {
         configureGrid();
         configureGridSelectedKunden();
         configureMailForm();
-        add(getToolbarTop(), grid, getContent(), getToolbarBottom());
+        add(getToolbarTop(), grid, getContent());
         updateList();
 
     }
@@ -82,13 +82,6 @@ public class MailView extends VerticalLayout {
         return toolbar;
     }
 
-    public HorizontalLayout getToolbarBottom() {
-        Button mail = new Button("Mails versenden");
-        mail.addClickListener(buttonClickEvent -> addMail());
-        HorizontalLayout content = new HorizontalLayout(mail);
-        return content;
-    }
-
     private void addMail() {
         grid2.asSingleSelect().clear();
         editMail(this.kundenSet);
@@ -98,14 +91,6 @@ public class MailView extends VerticalLayout {
         if (kundenSet.isEmpty()) {
             closeEditor();
         } else {
-
-            Object[] arr = new Kunde[Math.toIntExact(kundenDataService.countKunde())];
-            arr = kundenSet.toArray();
-            for (int i = 0; i < arr.length; i++) {
-                mailForm.setMailAdress((Kunde) arr[i]);
-            }
-            //mailForm.setMailAdress2(arr);
-
             mailForm.setVisible(true);
             addClassName("editing");
 
@@ -116,12 +101,12 @@ public class MailView extends VerticalLayout {
     public void configureMailForm() {
         mailForm = new MailForm();
         mailForm.setWidth("25em");
-        // mailForm.addListener(MailForm.SaveEvent.class, this::saveKunde);
+       // mailForm.addListener(MailForm.SendEvent.class, this::);
         // mailForm.addListener(InputForm.CloseEvent.class, event -> closeEditor());
     }
 
     public void closeEditor() {
-        mailForm.setMailAdress(null);
+        //mailForm.setMailAdress(null);
         mailForm.setVisible(false);
         removeClassName("editing");
     }
@@ -137,11 +122,6 @@ public class MailView extends VerticalLayout {
     public void updateList() {
         grid.setItems(kundenDataService.findAllKundenWithKlasse(filterText.getValue()));
     }
-
-  /*  public void saveKunde(MailForm.SaveEvent event) {
-        kundenDataService.saveKunde(event.getKunde());
-        updateList();
-    }*/
 
     public Grid<Kunde> getGrid() {
         return grid;
