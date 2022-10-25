@@ -14,21 +14,34 @@ import com.vaadin.flow.data.binder.BeanValidationBinder;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.shared.Registration;
+import lukegoll.mail.data.ServerData;
+import lukegoll.mail.data.UserData;
+import lukegoll.mail.login.Login;
+import lukegoll.mail.send.MailSender;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
 import lukegoll.schulranzen.aachen.webservices.data.entity.MailText;
 
 import java.util.List;
+import java.util.Set;
 
 public class MailForm extends FormLayout {
 
     // Binder<MailText> binder = new BeanValidationBinder<>(MailText.class);
     Binder<TextArea> mailBinder = new BeanValidationBinder<>(TextArea.class);
 
-    List<Kunde> kundenList;
-    private MailText mailText;
-
     //TextField mails = new TextField("E-Mail Adressen");
     TextArea text = new TextArea("Inhalt der Mail");
+
+    Set<Kunde> kundeSet;
+    private Kunde kunde;
+
+    UserData user = new UserData();
+    ServerData server = new ServerData();
+    Login login = new Login();
+    MailSender mailSender = new MailSender();
+
+
+    private String mailText;
 
 
     Button sendMails = new Button("Versenden");
@@ -48,7 +61,7 @@ public class MailForm extends FormLayout {
         sendMails.addClickShortcut(Key.ENTER);
         cancel.addClickShortcut(Key.ESCAPE);
 
-        sendMails.addClickListener(buttonClickEvent -> sendMail());
+        sendMails.addClickListener(buttonClickEvent -> initMailText());
         // sendMails.addClickListener(event -> validateAndSave());
         //cancel.addClickListener(event -> fireEvent(new CloseEvent(this)));
 
@@ -56,13 +69,23 @@ public class MailForm extends FormLayout {
         return new HorizontalLayout(sendMails, cancel);
     }
 
-    private void sendMail() {
+    private void initMailText() {
+        this.setMailText(text.getValue());
+        Object[] temparr = new Object[kundeSet.size()];
+        temparr = kundeSet.toArray();
+        login.login(server.getSmtpHost(), server.getSmtpPort(), user.getUsername(), user.getPassword());
+        mailSender.setMailSession(login.getMailSession());
+
         try {
-            mailBinder.writeBean(text);
-            fireEvent(new SendEvent(this, mailText.getText()));
-        } catch (ValidationException e) {
+            for (int i = 0; i < temparr.length; i++) {
+                kunde = (Kunde) temparr[i];
+                mailSender.sendMail(user.getUserMail(), "Luke", kunde.getMail(), "Test", this.getMailText());
+            }
+        } catch (Exception e) {
             e.printStackTrace();
         }
+        System.out.println(text.getValue());
+
     }
 
 
@@ -85,9 +108,6 @@ public class MailForm extends FormLayout {
         }
     }
 
-    public MailText getMailText() {
-        return this.mailText;
-    }
 
 
 
@@ -109,6 +129,14 @@ public class MailForm extends FormLayout {
     public <T extends ComponentEvent<?>> Registration addListener(Class<T> eventType,
                                                                   ComponentEventListener<T> listener) {
         return getEventBus().addListener(eventType, listener);
+    }
+
+    public String getMailText() {
+        return this.mailText;
+    }
+
+    public void setMailText(String mailText) {
+        this.mailText = mailText;
     }
 
 
@@ -135,6 +163,55 @@ public class MailForm extends FormLayout {
     public void setCancel(Button cancel) {
         this.cancel = cancel;
     }
+
+    public Set<Kunde> getKundeSet() {
+        return kundeSet;
+    }
+
+    public void setKundeSet(Set<Kunde> kundeSet) {
+        this.kundeSet = kundeSet;
+    }
+
+    public UserData getUser() {
+        return user;
+    }
+
+    public void setUser(UserData user) {
+        this.user = user;
+    }
+
+    public ServerData getServer() {
+        return server;
+    }
+
+    public void setServer(ServerData server) {
+        this.server = server;
+    }
+
+    public Login getLogin() {
+        return login;
+    }
+
+    public void setLogin(Login login) {
+        this.login = login;
+    }
+
+    public MailSender getMailSender() {
+        return mailSender;
+    }
+
+    public void setMailSender(MailSender mailSender) {
+        this.mailSender = mailSender;
+    }
+
+    public Kunde getKunde() {
+        return kunde;
+    }
+
+    public void setKunde(Kunde kunde) {
+        this.kunde = kunde;
+    }
+
 
 }
 

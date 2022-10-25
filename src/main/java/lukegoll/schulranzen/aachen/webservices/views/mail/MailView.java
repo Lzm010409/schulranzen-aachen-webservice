@@ -91,6 +91,7 @@ public class MailView extends VerticalLayout {
         if (kundenSet.isEmpty()) {
             closeEditor();
         } else {
+            mailForm.setKundeSet(kundenSet);
             mailForm.setVisible(true);
             addClassName("editing");
 
