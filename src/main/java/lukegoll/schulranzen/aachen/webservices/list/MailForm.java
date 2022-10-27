@@ -12,30 +12,31 @@ import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.BeanValidationBinder;
 import com.vaadin.flow.data.binder.Binder;
-import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.shared.Registration;
 import lukegoll.mail.data.ServerData;
 import lukegoll.mail.data.UserData;
 import lukegoll.mail.login.Login;
 import lukegoll.mail.send.MailSender;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
-import lukegoll.schulranzen.aachen.webservices.data.entity.MailText;
 
-import java.util.List;
+import javax.mail.MessagingException;
+import java.io.UnsupportedEncodingException;
 import java.util.Set;
 
 public class MailForm extends FormLayout {
-
     // Binder<MailText> binder = new BeanValidationBinder<>(MailText.class);
     Binder<TextArea> mailBinder = new BeanValidationBinder<>(TextArea.class);
 
     //TextField mails = new TextField("E-Mail Adressen");
-    TextArea text = new TextArea("Inhalt der Mail");
+    TextField anrede = new TextField("Anrede");
 
+    TextArea text = new TextArea("Text");
+    TextField verabschiedung = new TextField("Verabschiedung");
+    TextField absender = new TextField("Absender");
     Set<Kunde> kundeSet;
     private Kunde kunde;
 
-    UserData user = new UserData();
+    UserData userData = new UserData();
     ServerData server = new ServerData();
     Login login = new Login();
     MailSender mailSender = new MailSender();
@@ -47,10 +48,15 @@ public class MailForm extends FormLayout {
     Button sendMails = new Button("Versenden");
     Button cancel = new Button("Abbrechen");
 
-    public MailForm() {
+    public MailForm(String user, String password) {
+        this.userData.setUsername(user);
+        this.userData.setPassword(password);
         addClassName("contact-form");
+        mailBinder.forField(anrede).bind(TextArea::getValue, TextArea::setValue);
         mailBinder.forField(text).bind(TextArea::getValue, TextArea::setValue);
-        add(text,
+        mailBinder.forField(verabschiedung).bind(TextArea::getValue, TextArea::setValue);
+        mailBinder.forField(absender).bind(TextArea::getValue, TextArea::setValue);
+        add(anrede, text, verabschiedung, absender,
                 createButtonsLayout());
     }
 
@@ -61,7 +67,7 @@ public class MailForm extends FormLayout {
         sendMails.addClickShortcut(Key.ENTER);
         cancel.addClickShortcut(Key.ESCAPE);
 
-        sendMails.addClickListener(buttonClickEvent -> initMailText());
+        sendMails.addClickListener(buttonClickEvent -> sendMail());
         // sendMails.addClickListener(event -> validateAndSave());
         //cancel.addClickListener(event -> fireEvent(new CloseEvent(this)));
 
@@ -69,22 +75,26 @@ public class MailForm extends FormLayout {
         return new HorizontalLayout(sendMails, cancel);
     }
 
-    private void initMailText() {
-        this.setMailText(text.getValue());
+    private void sendMail() {
+        this.setMailText(anrede.getValue(), text.getValue(), verabschiedung.getValue(), absender.getValue());
+
         Object[] temparr = new Object[kundeSet.size()];
         temparr = kundeSet.toArray();
-        login.login(server.getSmtpHost(), server.getSmtpPort(), user.getUsername(), user.getPassword());
+        login.login(server.getSmtpHost(), server.getSmtpPort(), userData.getUsername(), userData.getPassword());
         mailSender.setMailSession(login.getMailSession());
 
         try {
             for (int i = 0; i < temparr.length; i++) {
                 kunde = (Kunde) temparr[i];
-                mailSender.sendMail(user.getUserMail(), "Luke", kunde.getMail(), "Test", this.getMailText());
+                System.out.println(kunde.getVorname());
+                mailSender.sendMail(userData.getUsername(), "Luke", kunde.getMail(), "Test", this.getMailText());
             }
-        } catch (Exception e) {
+        } catch (MessagingException e) {
             e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+
         }
-        System.out.println(text.getValue());
+        System.out.println(anrede.getValue());
 
     }
 
@@ -109,23 +119,6 @@ public class MailForm extends FormLayout {
     }
 
 
-
-
-
-   /*public static abstract class KundeFormEvent extends ComponentEvent<MailForm> {
-        private Kunden kunde;
-
-        protected KundeFormEvent(MailForm source, Kunden kunde) {
-            super(source, false);
-            this.kunde = kunde;
-        }
-
-        public Kunden getKunde() {
-            return this.kunde;
-        }
-    }*/
-
-
     public <T extends ComponentEvent<?>> Registration addListener(Class<T> eventType,
                                                                   ComponentEventListener<T> listener) {
         return getEventBus().addListener(eventType, listener);
@@ -135,17 +128,19 @@ public class MailForm extends FormLayout {
         return this.mailText;
     }
 
-    public void setMailText(String mailText) {
-        this.mailText = mailText;
+    public void setMailText(String anrede, String text, String verabschiedung, String absender) {
+        String umbruch ="\n";
+        this.mailText = String.join(anrede, "\n" , text , "\n" , verabschiedung , "\n" , absender);
+        System.out.println(mailText);
     }
 
 
-    public String getText() {
-        return text.getValue();
+    public String getAnrede() {
+        return anrede.getValue();
     }
 
-    public void setText(String text) {
-        this.text.setValue(text);
+    public void setAnrede(String anrede) {
+        this.anrede.setValue(anrede);
     }
 
     public Button getSendMails() {
@@ -172,12 +167,12 @@ public class MailForm extends FormLayout {
         this.kundeSet = kundeSet;
     }
 
-    public UserData getUser() {
-        return user;
+    public UserData getUserData() {
+        return userData;
     }
 
-    public void setUser(UserData user) {
-        this.user = user;
+    public void setUserData(UserData userData) {
+        this.userData = userData;
     }
 
     public ServerData getServer() {
@@ -210,6 +205,34 @@ public class MailForm extends FormLayout {
 
     public void setKunde(Kunde kunde) {
         this.kunde = kunde;
+    }
+
+    public void setAnrede(TextField anrede) {
+        this.anrede = anrede;
+    }
+
+    public TextArea getText() {
+        return text;
+    }
+
+    public void setText(TextArea text) {
+        this.text = text;
+    }
+
+    public TextField getVerabschiedung() {
+        return verabschiedung;
+    }
+
+    public void setVerabschiedung(TextField verabschiedung) {
+        this.verabschiedung = verabschiedung;
+    }
+
+    public TextField getAbsender() {
+        return absender;
+    }
+
+    public void setAbsender(TextField absender) {
+        this.absender = absender;
     }
 
 

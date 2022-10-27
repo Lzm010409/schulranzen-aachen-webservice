@@ -3,6 +3,7 @@ package lukegoll.schulranzen.aachen.webservices.views;
 
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Footer;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H2;
@@ -15,7 +16,6 @@ import lukegoll.schulranzen.aachen.webservices.components.appnav.AppNavItem;
 import lukegoll.schulranzen.aachen.webservices.views.home.HomeView;
 import lukegoll.schulranzen.aachen.webservices.views.kunden.KundenView;
 import lukegoll.schulranzen.aachen.webservices.views.mail.MailView;
-
 /**
  * The main view is a top-level placeholder for other views.
  */
@@ -43,7 +43,6 @@ public class MainLayout extends AppLayout {
         H1 appName = new H1("Schulranzen-Aachen-Webservice");
         appName.addClassNames(LumoUtility.FontSize.LARGE, LumoUtility.Margin.NONE);
         Header header = new Header(appName);
-
         Scroller scroller = new Scroller(createNavigation());
 
         addToDrawer(header, scroller, createFooter());

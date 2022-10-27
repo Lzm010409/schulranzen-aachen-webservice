@@ -9,7 +9,7 @@ import java.util.Properties;
 public class Login {
     private Session mailSession;
 
-    public void login (String smtpHost, String smtpPort, String username, String password){
+    public void login(String smtpHost, String smtpPort, String username, String password) {
         Properties properties = new Properties();
         properties.put("mail.smtp.host", smtpHost);
         properties.put("mail.smtp.socketFactory.port", smtpPort);
@@ -17,15 +17,19 @@ public class Login {
         properties.put("mail.smtp.auth", "true");
         properties.put("mail.smtp.port", smtpPort);
 
-        Authenticator authenticator= new Authenticator() {
+        Authenticator authenticator = new Authenticator() {
             @Override
-            protected PasswordAuthentication getPasswordAuthentication(){
+            protected PasswordAuthentication getPasswordAuthentication() {
                 return new PasswordAuthentication(username, password);
             }
         };
+        try {
+            this.mailSession = Session.getDefaultInstance(properties, authenticator);
+            System.out.println("Eingeloggt...");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-        this.mailSession = Session.getDefaultInstance(properties,authenticator);
-        System.out.println("Eingeloggt...");
     }
 
 

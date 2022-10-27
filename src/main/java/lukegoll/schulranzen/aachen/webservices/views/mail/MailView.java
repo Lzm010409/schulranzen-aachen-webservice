@@ -1,13 +1,17 @@
 package lukegoll.schulranzen.aachen.webservices.views.mail;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.EmailField;
+import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import lukegoll.mail.data.UserData;
 import lukegoll.schulranzen.aachen.webservices.data.KundenDataService;
 import lukegoll.schulranzen.aachen.webservices.data.MailTextDataService;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
@@ -16,6 +20,7 @@ import lukegoll.schulranzen.aachen.webservices.list.InputForm;
 import lukegoll.schulranzen.aachen.webservices.list.MailForm;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
 
+import javax.annotation.security.PermitAll;
 import java.util.*;
 
 @PageTitle("Mail")
@@ -30,7 +35,13 @@ public class MailView extends VerticalLayout {
     MailForm mailForm;
 
     TextField filterText = new TextField();
+    EmailField emailField = new EmailField();
+    PasswordField passwordField = new PasswordField();
+    Button signIn = new Button("Anmelden");
     List<Kunde> liste = new ArrayList<>();
+
+
+    UserData userData = new UserData();
 
     public MailView(KundenDataService kundenDataService) {
         this.kundenDataService = kundenDataService;
@@ -39,7 +50,7 @@ public class MailView extends VerticalLayout {
         configureGrid();
         configureGridSelectedKunden();
         configureMailForm();
-        add(getToolbarTop(), grid, getContent());
+        add(getToolbarTop(), grid, createMailLogin(), getContent());
         updateList();
 
     }
@@ -52,7 +63,31 @@ public class MailView extends VerticalLayout {
         content.setFlexGrow(1, mailForm);
         content.addClassName("content");
         content.setSizeFull();
+
+
         return content;
+    }
+
+    public HorizontalLayout createMailLogin() {
+        emailField.setPlaceholder("E-Mail Adresse");
+        emailField.setErrorMessage("Das ist keine valide E-Mail");
+        emailField.setClearButtonVisible(true);
+
+        passwordField.setPlaceholder("Passwort");
+        passwordField.setRevealButtonVisible(true);
+        passwordField.setHelperText("Das Passwort muss mit dem Mail-Account Passwort übereinstimmen, sonst können keine Mails versendet werden.");
+
+        signIn.addClickListener(buttonClickEvent -> loginIn(emailField.getValue(), passwordField.getValue()));
+        HorizontalLayout mailLogin = new HorizontalLayout(emailField, passwordField, signIn);
+        return mailLogin;
+    }
+
+    private void loginIn(String user, String password) {
+        userData.setUsername(user);
+        userData.setPassword(password);
+        System.out.println(user + password);
+        mailForm.setVisible(true);
+
     }
 
     public void configureGrid() {
@@ -70,6 +105,7 @@ public class MailView extends VerticalLayout {
         grid2.setSizeFull();
         grid2.setColumns("klasse", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
         grid2.getColumns().forEach(col -> col.setAutoWidth(true));
+        grid2.setVisible(false);
     }
 
     public HorizontalLayout getToolbarTop() {
@@ -82,17 +118,12 @@ public class MailView extends VerticalLayout {
         return toolbar;
     }
 
-    private void addMail() {
-        grid2.asSingleSelect().clear();
-        editMail(this.kundenSet);
-    }
 
     private void editMail(Set<Kunde> kundenSet) {
         if (kundenSet.isEmpty()) {
             closeEditor();
         } else {
             mailForm.setKundeSet(kundenSet);
-            mailForm.setVisible(true);
             addClassName("editing");
 
 
@@ -100,9 +131,10 @@ public class MailView extends VerticalLayout {
     }
 
     public void configureMailForm() {
-        mailForm = new MailForm();
+        mailForm = new MailForm(userData.getUsername(), userData.getPassword());
         mailForm.setWidth("25em");
-       // mailForm.addListener(MailForm.SendEvent.class, this::);
+        mailForm.setVisible(false);
+        // mailForm.addListener(MailForm.SendEvent.class, this::);
         // mailForm.addListener(InputForm.CloseEvent.class, event -> closeEditor());
     }
 
@@ -114,10 +146,14 @@ public class MailView extends VerticalLayout {
 
 
     private void uebertrageKundenData(Set<Kunde> kundenSet) {
-        grid2.setItems(kundenSet);
-        this.kundenSet = kundenSet;
+        if (kundenSet.isEmpty()) {
+            grid2.setVisible(false);
+        } else {
+            grid2.setItems(kundenSet);
+            grid2.setVisible(true);
+            this.kundenSet = kundenSet;
 
-
+        }
     }
 
     public void updateList() {
@@ -148,4 +184,11 @@ public class MailView extends VerticalLayout {
         this.filterText = filterText;
     }
 
+    public UserData getUserData() {
+        return userData;
+    }
+
+    public void setUserData(UserData userData) {
+        this.userData = userData;
+    }
 }
