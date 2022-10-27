@@ -1,8 +1,14 @@
 package lukegoll.schulranzen.aachen.webservices.views.mail;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.EmailField;
@@ -12,6 +18,7 @@ import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import lukegoll.mail.data.UserData;
+import lukegoll.mail.login.Login;
 import lukegoll.schulranzen.aachen.webservices.data.KundenDataService;
 import lukegoll.schulranzen.aachen.webservices.data.MailTextDataService;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
@@ -39,6 +46,15 @@ public class MailView extends VerticalLayout {
     PasswordField passwordField = new PasswordField();
     Button signIn = new Button("Anmelden");
     List<Kunde> liste = new ArrayList<>();
+    Login login = new Login();
+
+
+    public void setSmtpPort(String smtpPort) {
+        this.smtpPort = smtpPort;
+    }
+
+    private String smtpHost;
+    private String smtpPort;
 
 
     UserData userData = new UserData();
@@ -50,19 +66,21 @@ public class MailView extends VerticalLayout {
         configureGrid();
         configureGridSelectedKunden();
         configureMailForm();
-        add(getToolbarTop(), grid, createMailLogin(), getContent());
+        configureToolbar();
+        add(getContent());
         updateList();
 
     }
 
 
     public Component getContent() {
+        HorizontalLayout content1 = new HorizontalLayout(grid2, mailForm);
+        content1.setFlexGrow(2, grid2);
+        content1.setFlexGrow(1, mailForm);
+        content1.addClassName("content");
+        content1.setSizeFull();
 
-        HorizontalLayout content = new HorizontalLayout(grid2, mailForm);
-        content.setFlexGrow(2, grid2);
-        content.setFlexGrow(1, mailForm);
-        content.addClassName("content");
-        content.setSizeFull();
+        VerticalLayout content = new VerticalLayout(createMailLogin(), filterText, grid, content1);
 
 
         return content;
@@ -75,18 +93,35 @@ public class MailView extends VerticalLayout {
 
         passwordField.setPlaceholder("Passwort");
         passwordField.setRevealButtonVisible(true);
-        passwordField.setHelperText("Das Passwort muss mit dem Mail-Account Passwort übereinstimmen, sonst können keine Mails versendet werden.");
-
+        //passwordField.setHelperText("Das Passwort muss mit dem Mail-Account Passwort übereinstimmen, sonst können keine Mails versendet werden.");
         signIn.addClickListener(buttonClickEvent -> loginIn(emailField.getValue(), passwordField.getValue()));
         HorizontalLayout mailLogin = new HorizontalLayout(emailField, passwordField, signIn);
         return mailLogin;
     }
 
     private void loginIn(String user, String password) {
-        userData.setUsername(user);
-        userData.setPassword(password);
-        System.out.println(user + password);
-        mailForm.setVisible(true);
+        int exitcode = 0;
+        try {
+            exitcode = login.tryToAuthenticate(smtpHost, smtpPort, user, password);
+            if (exitcode == 0) {
+                userData.setUsername(user);
+                userData.setPassword(password);
+                showSuccesNot();
+                filterText.setVisible(true);
+                grid.setVisible(true);
+                grid2.setVisible(true);
+                mailForm.setVisible(true);
+
+
+            }
+            if (exitcode == 1) {
+                showErrorNot();
+                passwordField.clear();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
 
     }
 
@@ -95,9 +130,12 @@ public class MailView extends VerticalLayout {
         grid.setSizeFull();
         grid.setColumns("klasse", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
         grid.getColumns().forEach(col -> col.setAutoWidth(true));
+        grid.setHeight("100");
         grid.setSelectionMode(Grid.SelectionMode.MULTI);
+        grid.setVisible(false);
         grid.addSelectionListener(selectionEvent -> uebertrageKundenData(selectionEvent.getAllSelectedItems()));
         grid.addSelectionListener(selectionEvent -> editMail(selectionEvent.getAllSelectedItems()));
+
     }
 
     public void configureGridSelectedKunden() {
@@ -106,16 +144,15 @@ public class MailView extends VerticalLayout {
         grid2.setColumns("klasse", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
         grid2.getColumns().forEach(col -> col.setAutoWidth(true));
         grid2.setVisible(false);
+
     }
 
-    public HorizontalLayout getToolbarTop() {
+    public void configureToolbar() {
         filterText.setPlaceholder("Nach Klasse filtern...");
-        filterText.setVisible(true);
         filterText.setValueChangeMode(ValueChangeMode.LAZY);
         filterText.addValueChangeListener(event -> updateList());
-        HorizontalLayout toolbar = new HorizontalLayout(filterText);
-        toolbar.addClassName("toolbar");
-        return toolbar;
+        filterText.setVisible(false);
+
     }
 
 
@@ -156,6 +193,46 @@ public class MailView extends VerticalLayout {
         }
     }
 
+    public void showErrorNot() {
+        Notification notification = new Notification();
+        notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
+
+        Div text = new Div(new Text("Authentifizierung fehlgeschlagen! E-Mail und Passwort überprüfen"));
+
+        Button closeButton = new Button(new Icon("lumo", "cross"));
+        closeButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
+        closeButton.getElement().setAttribute("aria-label", "Close");
+        closeButton.addClickListener(event -> {
+            notification.close();
+        });
+
+        HorizontalLayout layout = new HorizontalLayout(text, closeButton);
+        layout.setAlignItems(Alignment.CENTER);
+
+        notification.add(layout);
+        notification.open();
+    }
+
+    public void showSuccesNot() {
+        Notification notification = new Notification();
+        notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+
+        Div text = new Div(new Text("Authentifizierung erfolgreich!"));
+
+        Button closeButton = new Button(new Icon("lumo", "cross"));
+        closeButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
+        closeButton.getElement().setAttribute("aria-label", "Close");
+        closeButton.addClickListener(event -> {
+            notification.close();
+        });
+
+        HorizontalLayout layout = new HorizontalLayout(text, closeButton);
+        layout.setAlignItems(Alignment.CENTER);
+
+        notification.add(layout);
+        notification.open();
+    }
+
     public void updateList() {
         grid.setItems(kundenDataService.findAllKundenWithKlasse(filterText.getValue()));
     }
@@ -190,5 +267,17 @@ public class MailView extends VerticalLayout {
 
     public void setUserData(UserData userData) {
         this.userData = userData;
+    }
+
+    public String getSmtpHost() {
+        return smtpHost;
+    }
+
+    public void setSmtpHost(String smtpHost) {
+        this.smtpHost = smtpHost;
+    }
+
+    public String getSmtpPort() {
+        return smtpPort;
     }
 }
