@@ -4,6 +4,7 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.icon.Icon;
@@ -20,14 +21,12 @@ import com.vaadin.flow.router.Route;
 import lukegoll.mail.data.UserData;
 import lukegoll.mail.login.Login;
 import lukegoll.schulranzen.aachen.webservices.data.KundenDataService;
-import lukegoll.schulranzen.aachen.webservices.data.MailTextDataService;
+import lukegoll.schulranzen.aachen.webservices.data.ProviderDataService;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
-import lukegoll.schulranzen.aachen.webservices.data.entity.MailText;
-import lukegoll.schulranzen.aachen.webservices.list.InputForm;
+import lukegoll.schulranzen.aachen.webservices.data.entity.Provider;
 import lukegoll.schulranzen.aachen.webservices.list.MailForm;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
 
-import javax.annotation.security.PermitAll;
 import java.util.*;
 
 @PageTitle("Mail")
@@ -36,7 +35,7 @@ public class MailView extends VerticalLayout {
     Grid<Kunde> grid = new Grid<>(Kunde.class);
     Grid<Kunde> grid2 = new Grid<>(Kunde.class);
     KundenDataService kundenDataService;
-    MailTextDataService kundenMailDataService;
+    ProviderDataService providerDataService;
     Set<Kunde> kundenSet;
 
     MailForm mailForm;
@@ -44,6 +43,7 @@ public class MailView extends VerticalLayout {
     TextField filterText = new TextField();
     EmailField emailField = new EmailField();
     PasswordField passwordField = new PasswordField();
+    ComboBox<Provider> providerComboBox = new ComboBox<>();
     Button signIn = new Button("Anmelden");
     List<Kunde> liste = new ArrayList<>();
     Login login = new Login();
@@ -59,7 +59,8 @@ public class MailView extends VerticalLayout {
 
     UserData userData = new UserData();
 
-    public MailView(KundenDataService kundenDataService) {
+    public MailView(KundenDataService kundenDataService, ProviderDataService providerDataService) {
+        this.providerDataService = providerDataService;
         this.kundenDataService = kundenDataService;
         addClassName("list-view");
         setSizeFull();
@@ -93,9 +94,14 @@ public class MailView extends VerticalLayout {
 
         passwordField.setPlaceholder("Passwort");
         passwordField.setRevealButtonVisible(true);
+
         //passwordField.setHelperText("Das Passwort muss mit dem Mail-Account Passwort übereinstimmen, sonst können keine Mails versendet werden.");
         signIn.addClickListener(buttonClickEvent -> loginIn(emailField.getValue(), passwordField.getValue()));
-        HorizontalLayout mailLogin = new HorizontalLayout(emailField, passwordField, signIn);
+
+        providerComboBox.setItems(providerDataService.findAllKunden());
+        providerComboBox.setItemLabelGenerator(Provider::getProviderName);
+        providerComboBox.setPlaceholder("Bitte zu erst den Provider wählen!");
+        HorizontalLayout mailLogin = new HorizontalLayout(providerComboBox, emailField, passwordField, signIn);
         return mailLogin;
     }
 
