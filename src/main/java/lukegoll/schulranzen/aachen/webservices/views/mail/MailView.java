@@ -1,6 +1,7 @@
 package lukegoll.schulranzen.aachen.webservices.views.mail;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -12,6 +13,7 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.progressbar.ProgressBar;
 import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
@@ -47,6 +49,9 @@ public class MailView extends VerticalLayout {
     Button signIn = new Button("Anmelden");
     List<Kunde> liste = new ArrayList<>();
     Login login = new Login();
+
+    private boolean sendVorgang = false;
+    private double progress = 0;
 
 
     public void setSmtpPort(String smtpPort) {
@@ -96,13 +101,22 @@ public class MailView extends VerticalLayout {
         passwordField.setRevealButtonVisible(true);
 
         //passwordField.setHelperText("Das Passwort muss mit dem Mail-Account Passwort übereinstimmen, sonst können keine Mails versendet werden.");
+        signIn.addClickShortcut(Key.ESCAPE);
         signIn.addClickListener(buttonClickEvent -> loginIn(emailField.getValue(), passwordField.getValue()));
 
         providerComboBox.setItems(providerDataService.findAllKunden());
         providerComboBox.setItemLabelGenerator(Provider::getProviderName);
         providerComboBox.setPlaceholder("Bitte zu erst den Provider wählen!");
+        providerComboBox.addValueChangeListener(comboBoxProviderComponentValueChangeEvent -> setProviderData(providerComboBox.getValue()));
         HorizontalLayout mailLogin = new HorizontalLayout(providerComboBox, emailField, passwordField, signIn);
         return mailLogin;
+    }
+
+    private void setProviderData(Provider value) {
+        setSmtpHost(value.getSmtpHost());
+        setSmtpPort(value.getSmtpPort());
+        mailForm.setProvider(value);
+        System.out.println("Smtp Host: " + smtpHost + "Smtp Port: " + smtpPort);
     }
 
     private void loginIn(String user, String password) {
@@ -112,12 +126,12 @@ public class MailView extends VerticalLayout {
             if (exitcode == 0) {
                 userData.setUsername(user);
                 userData.setPassword(password);
+                mailForm.setUserData(this.userData);
                 showSuccesNot();
                 filterText.setVisible(true);
                 grid.setVisible(true);
                 grid2.setVisible(true);
                 mailForm.setVisible(true);
-
 
             }
             if (exitcode == 1) {
@@ -140,7 +154,7 @@ public class MailView extends VerticalLayout {
         grid.setSelectionMode(Grid.SelectionMode.MULTI);
         grid.setVisible(false);
         grid.addSelectionListener(selectionEvent -> uebertrageKundenData(selectionEvent.getAllSelectedItems()));
-        grid.addSelectionListener(selectionEvent -> editMail(selectionEvent.getAllSelectedItems()));
+        grid.addSelectionListener(selectionEvent -> editMailForm(selectionEvent.getAllSelectedItems()));
 
     }
 
@@ -162,7 +176,7 @@ public class MailView extends VerticalLayout {
     }
 
 
-    private void editMail(Set<Kunde> kundenSet) {
+    private void editMailForm(Set<Kunde> kundenSet) {
         if (kundenSet.isEmpty()) {
             closeEditor();
         } else {
@@ -174,7 +188,7 @@ public class MailView extends VerticalLayout {
     }
 
     public void configureMailForm() {
-        mailForm = new MailForm(userData.getUsername(), userData.getPassword());
+        mailForm = new MailForm(userData);
         mailForm.setWidth("25em");
         mailForm.setVisible(false);
         // mailForm.addListener(MailForm.SendEvent.class, this::);
@@ -286,4 +300,7 @@ public class MailView extends VerticalLayout {
     public String getSmtpPort() {
         return smtpPort;
     }
+
+
 }
+

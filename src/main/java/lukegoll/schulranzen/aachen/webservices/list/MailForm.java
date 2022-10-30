@@ -13,11 +13,15 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.BeanValidationBinder;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.shared.Registration;
+import lukegoll.mail.TextEncoder.HtmlEncoder;
 import lukegoll.mail.data.ServerData;
 import lukegoll.mail.data.UserData;
 import lukegoll.mail.login.Login;
 import lukegoll.mail.send.MailSender;
+import lukegoll.schulranzen.aachen.webservices.data.ProviderDataService;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
+import lukegoll.schulranzen.aachen.webservices.data.entity.Provider;
+import org.apache.catalina.User;
 
 import javax.mail.MessagingException;
 import java.io.UnsupportedEncodingException;
@@ -28,19 +32,22 @@ public class MailForm extends FormLayout {
     Binder<TextArea> mailBinder = new BeanValidationBinder<>(TextArea.class);
 
     //TextField mails = new TextField("E-Mail Adressen");
-    TextField anrede = new TextField("Anrede");
+
 
     TextArea text = new TextArea("Text");
-    TextField verabschiedung = new TextField("Verabschiedung");
-    TextField absender = new TextField("Absender");
+
     Set<Kunde> kundeSet;
     private Kunde kunde;
 
-    UserData userData = new UserData();
-    ServerData server = new ServerData();
+    private UserData userData = new UserData();
+    private Provider provider = new Provider();
+
     Login login = new Login();
     MailSender mailSender = new MailSender();
 
+    private double progress = 0;
+
+    private boolean sendeVorgang = false;
 
     private String mailText;
 
@@ -48,25 +55,19 @@ public class MailForm extends FormLayout {
     Button sendMails = new Button("Versenden");
     Button cancel = new Button("Abbrechen");
 
-    public MailForm(String user, String password) {
-        this.userData.setUsername(user);
-        this.userData.setPassword(password);
+    public MailForm(UserData userData) {
+        userData.setUsername(userData.getUsername());
+        userData.setPassword(userData.getPassword());
         addClassName("contact-form");
-        mailBinder.forField(anrede).bind(TextArea::getValue, TextArea::setValue);
         mailBinder.forField(text).bind(TextArea::getValue, TextArea::setValue);
-        mailBinder.forField(verabschiedung).bind(TextArea::getValue, TextArea::setValue);
-        mailBinder.forField(absender).bind(TextArea::getValue, TextArea::setValue);
-        add(anrede, text, verabschiedung, absender,
+        add(text,
                 createButtonsLayout());
     }
 
     private Component createButtonsLayout() {
         sendMails.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         cancel.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-
-        sendMails.addClickShortcut(Key.ENTER);
         cancel.addClickShortcut(Key.ESCAPE);
-
         sendMails.addClickListener(buttonClickEvent -> sendMail());
         // sendMails.addClickListener(event -> validateAndSave());
         //cancel.addClickListener(event -> fireEvent(new CloseEvent(this)));
@@ -76,11 +77,10 @@ public class MailForm extends FormLayout {
     }
 
     private void sendMail() {
-        this.setMailText(anrede.getValue(), text.getValue(), verabschiedung.getValue(), absender.getValue());
-
+        this.setMailText(text.getValue());
         Object[] temparr = new Object[kundeSet.size()];
         temparr = kundeSet.toArray();
-        login.login(server.getSmtpHost(), server.getSmtpPort(), userData.getUsername(), userData.getPassword());
+        login.login(provider.getSmtpHost(), provider.getSmtpPort(), userData.getUsername(), userData.getPassword());
         mailSender.setMailSession(login.getMailSession());
 
         try {
@@ -94,7 +94,6 @@ public class MailForm extends FormLayout {
         } catch (UnsupportedEncodingException e) {
 
         }
-        System.out.println(anrede.getValue());
 
     }
 
@@ -128,20 +127,12 @@ public class MailForm extends FormLayout {
         return this.mailText;
     }
 
-    public void setMailText(String anrede, String text, String verabschiedung, String absender) {
-        String umbruch ="\n";
-        this.mailText = String.join(anrede, "\n" , text , "\n" , verabschiedung , "\n" , absender);
+    public void setMailText(String text) {
+        String umbruch = "\n";
+        this.mailText = HtmlEncoder.textToHTML(text);
         System.out.println(mailText);
     }
 
-
-    public String getAnrede() {
-        return anrede.getValue();
-    }
-
-    public void setAnrede(String anrede) {
-        this.anrede.setValue(anrede);
-    }
 
     public Button getSendMails() {
         return sendMails;
@@ -175,14 +166,6 @@ public class MailForm extends FormLayout {
         this.userData = userData;
     }
 
-    public ServerData getServer() {
-        return server;
-    }
-
-    public void setServer(ServerData server) {
-        this.server = server;
-    }
-
     public Login getLogin() {
         return login;
     }
@@ -207,9 +190,6 @@ public class MailForm extends FormLayout {
         this.kunde = kunde;
     }
 
-    public void setAnrede(TextField anrede) {
-        this.anrede = anrede;
-    }
 
     public TextArea getText() {
         return text;
@@ -219,22 +199,29 @@ public class MailForm extends FormLayout {
         this.text = text;
     }
 
-    public TextField getVerabschiedung() {
-        return verabschiedung;
+    public double getProgress() {
+        return progress;
     }
 
-    public void setVerabschiedung(TextField verabschiedung) {
-        this.verabschiedung = verabschiedung;
+    public void setProgress(double progress) {
+        this.progress = progress;
     }
 
-    public TextField getAbsender() {
-        return absender;
+    public boolean isSendeVorgang() {
+        return sendeVorgang;
     }
 
-    public void setAbsender(TextField absender) {
-        this.absender = absender;
+    public void setSendeVorgang(boolean sendeVorgang) {
+        this.sendeVorgang = sendeVorgang;
     }
 
+    public Provider getProvider() {
+        return provider;
+    }
+
+    public void setProvider(Provider provider) {
+        this.provider = provider;
+    }
 
 }
 
