@@ -56,6 +56,8 @@ public class MailForm extends FormLayout {
     Button sendMails = new Button("Versenden");
     Button cancel = new Button("Abbrechen");
 
+
+
     public MailForm(UserData userData) {
         userData.setUsername(userData.getUsername());
         userData.setPassword(userData.getPassword());

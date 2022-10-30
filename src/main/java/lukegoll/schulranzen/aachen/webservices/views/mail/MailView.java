@@ -29,6 +29,7 @@ import lukegoll.schulranzen.aachen.webservices.data.entity.Provider;
 import lukegoll.schulranzen.aachen.webservices.list.MailForm;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
 
+import javax.annotation.security.PermitAll;
 import java.util.*;
 
 @PageTitle("Mail")

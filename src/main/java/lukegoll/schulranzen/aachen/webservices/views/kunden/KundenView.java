@@ -15,7 +15,6 @@ import lukegoll.schulranzen.aachen.webservices.list.InputForm;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
 
 import javax.annotation.security.PermitAll;
-
 @PageTitle("Kunden")
 @Route(value = "kunden", layout = MainLayout.class)
 public class KundenView extends VerticalLayout {

@@ -16,12 +16,15 @@ import lukegoll.schulranzen.aachen.webservices.components.appnav.AppNavItem;
 import lukegoll.schulranzen.aachen.webservices.views.home.HomeView;
 import lukegoll.schulranzen.aachen.webservices.views.kunden.KundenView;
 import lukegoll.schulranzen.aachen.webservices.views.mail.MailView;
+
 /**
  * The main view is a top-level placeholder for other views.
  */
 public class MainLayout extends AppLayout {
 
     private H2 viewTitle;
+
+
 
     public MainLayout() {
         setPrimarySection(Section.DRAWER);
@@ -32,7 +35,6 @@ public class MainLayout extends AppLayout {
     private void addHeaderContent() {
         DrawerToggle toggle = new DrawerToggle();
         toggle.getElement().setAttribute("aria-label", "Menu toggle");
-
         viewTitle = new H2();
         viewTitle.addClassNames(LumoUtility.FontSize.LARGE, LumoUtility.Margin.NONE);
 
