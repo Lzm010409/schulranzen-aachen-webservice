@@ -33,7 +33,8 @@ public class MailForm extends FormLayout {
 
     //TextField mails = new TextField("E-Mail Adressen");
 
-
+    TextField absender = new TextField("Absender");
+    TextField betreff = new TextField("Betreff");
     TextArea text = new TextArea("Text");
 
     Set<Kunde> kundeSet;
@@ -60,7 +61,7 @@ public class MailForm extends FormLayout {
         userData.setPassword(userData.getPassword());
         addClassName("contact-form");
         mailBinder.forField(text).bind(TextArea::getValue, TextArea::setValue);
-        add(text,
+        add(absender, betreff, text,
                 createButtonsLayout());
     }
 
@@ -87,7 +88,7 @@ public class MailForm extends FormLayout {
             for (int i = 0; i < temparr.length; i++) {
                 kunde = (Kunde) temparr[i];
                 System.out.println(kunde.getVorname());
-                mailSender.sendMail(userData.getUsername(), "Luke", kunde.getMail(), "Test", this.getMailText());
+                mailSender.sendMail(userData.getUsername(), absender.getValue(), kunde.getMail(), betreff.getValue(), this.getMailText());
             }
         } catch (MessagingException e) {
             e.printStackTrace();
@@ -221,6 +222,14 @@ public class MailForm extends FormLayout {
 
     public void setProvider(Provider provider) {
         this.provider = provider;
+    }
+
+    public TextField getBetreff() {
+        return betreff;
+    }
+
+    public void setBetreff(TextField betreff) {
+        this.betreff = betreff;
     }
 
 }

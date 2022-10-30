@@ -51,9 +51,6 @@ public class MailSender {
     }
 
 
-
-
-
     public Session getMailSession() {
         return mailSession;
     }
@@ -100,25 +97,5 @@ public class MailSender {
 
     public void setMessage(String message) {
         this.message = message;
-    }
-
-    public static void main (String []args){
-        UserData user= new UserData();
-        ServerData server = new ServerData();
-        Login login = new Login();
-        MailSender mailSender= new MailSender();
-
-        login.login(server.getSmtpHost(), server.getSmtpPort(), "luke01@arcor.de", "test");
-        mailSender.setMailSession(login.getMailSession());
-
-        try {
-            mailSender.sendMail("luke01@arcor.de", "Luke", "lukegollenstede@gmail.com", "Test", "TEST");
-        } catch (MessagingException e) {
-            throw new RuntimeException(e);
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
-
-
     }
 }
