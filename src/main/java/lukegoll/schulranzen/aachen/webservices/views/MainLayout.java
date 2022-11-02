@@ -25,7 +25,6 @@ public class MainLayout extends AppLayout {
     private H2 viewTitle;
 
 
-
     public MainLayout() {
         setPrimarySection(Section.DRAWER);
         addDrawerContent();
@@ -54,8 +53,7 @@ public class MainLayout extends AppLayout {
         // AppNav is not yet an official component.
         // For documentation, visit https://github.com/vaadin/vcf-nav#readme
         AppNav nav = new AppNav();
-
-        nav.addItem(new AppNavItem("Home", HomeView.class, "la la-globe"));
+        nav.addItem(new AppNavItem("Home", HomeView.class, "la la-file"));
         nav.addItem(new AppNavItem("Kunden", KundenView.class, "la la-file"));
         nav.addItem(new AppNavItem("Mail", MailView.class, "la la-file"));
 

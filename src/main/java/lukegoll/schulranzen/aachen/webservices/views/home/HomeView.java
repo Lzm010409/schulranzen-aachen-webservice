@@ -1,9 +1,14 @@
 package lukegoll.schulranzen.aachen.webservices.views.home;
 
 import com.vaadin.flow.component.Key;
+import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.details.Details;
+import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -19,17 +24,21 @@ public class HomeView extends HorizontalLayout {
     private Button sayHello;
 
     public HomeView() {
-        name = new TextField("Your name");
-        sayHello = new Button("Say hello");
-        sayHello.addClickListener(e -> {
-            Notification.show("Hello " + name.getValue());
-        });
-        sayHello.addClickShortcut(Key.ENTER);
+        Span name = new Span("Luke Gollenstede");
+        Span email = new Span("lukegollenstede@gmail.com");
+        Span phone = new Span("+49 1575 1405748");
 
-        setMargin(true);
-        setVerticalComponentAlignment(Alignment.END, name, sayHello);
+        VerticalLayout content = new VerticalLayout(name, email, phone);
+        content.setSpacing(false);
+        content.setPadding(false);
 
-        add(name, sayHello);
+        Details details = new Details("Bei Fragen", content);
+        details.setOpened(true);
+
+        H1 title = new H1("Auf den folgenden Seiten können Sie die Kunden-Daten angeben und Mails versenden");
+
+        VerticalLayout verticalLayout = new VerticalLayout(title, details);
+        add(verticalLayout);
     }
 
 }
