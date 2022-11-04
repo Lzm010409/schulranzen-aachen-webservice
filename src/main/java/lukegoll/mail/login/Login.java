@@ -24,6 +24,7 @@ public class Login {
         properties.put("mail.smtp.socketFactory.port", smtpPort);
         properties.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
         properties.put("mail.smtp.auth", "true");
+        properties.put("mail.smtp.starttls.enable", "true");
         properties.put("mail.smtp.port", smtpPort);
 
         Authenticator authenticator = new Authenticator() {
@@ -41,7 +42,7 @@ public class Login {
 
     }
 
-    public int tryToAuthenticate(String smtpHost, String smtpPort,String username, String password) {
+    public int tryToAuthenticate(String smtpHost, String smtpPort, String username, String password) {
         int exitcode = 0;
         login(smtpHost, smtpPort, username, password);
         try {
