@@ -102,7 +102,7 @@ public class MailView extends VerticalLayout {
         passwordField.setRevealButtonVisible(true);
 
         //passwordField.setHelperText("Das Passwort muss mit dem Mail-Account Passwort übereinstimmen, sonst können keine Mails versendet werden.");
-        signIn.addClickShortcut(Key.ENTER);
+        //signIn.addClickShortcut(Key.ENTER);
         signIn.addClickListener(buttonClickEvent -> loginIn(emailField.getValue(), passwordField.getValue()));
 
         providerComboBox.setItems(providerDataService.findAllKunden());

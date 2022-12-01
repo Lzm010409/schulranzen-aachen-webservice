@@ -61,7 +61,7 @@ public class Login {
             msg.setContent("Erfolgreich in der Kunden-Datenbank angemeldet", "text/html");
             msg.setSentDate(new Date());
 
-            msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse("lukegollenstede@gmail.com", false));
+            msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(username, false));
             System.out.println("Versende Mail....");
             Transport.send(msg);
             System.out.println("Mail Versendet!");

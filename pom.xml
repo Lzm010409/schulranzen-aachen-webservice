@@ -274,6 +274,20 @@
         </profile>
 
         <profile>
+            <id>mariadb</id>
+            <properties>
+                <activatedProperties>mariadb</activatedProperties>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>win</id>
+            <properties>
+                <activatedProperties>win</activatedProperties>
+            </properties>
+        </profile>
+
+        <profile>
             <id>it</id>
             <build>
                 <plugins>
