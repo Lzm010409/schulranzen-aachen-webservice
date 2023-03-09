@@ -22,7 +22,7 @@ public class Kunde extends AbstractEntity {
     private String stadt;
 
     @NotBlank
-    private String klasse;
+    private String jahr;
 
     @Email
     @NotBlank
@@ -30,6 +30,11 @@ public class Kunde extends AbstractEntity {
 
     @NotBlank
     private String tel;
+
+   /* @NotBlank
+    private String productName;
+    @NotBlank
+    private int productId;*/
 
 
     public String getVorname() {
@@ -56,7 +61,7 @@ public class Kunde extends AbstractEntity {
         this.adresse = adresse;
     }
 
-   public String getPlz() {
+    public String getPlz() {
         return plz;
     }
 
@@ -72,12 +77,12 @@ public class Kunde extends AbstractEntity {
         this.stadt = stadt;
     }
 
-    public String getKlasse() {
-        return klasse;
+    public String getJahr() {
+        return jahr;
     }
 
-    public void setKlasse(String klasse) {
-        this.klasse = klasse;
+    public void setJahr(String klasse) {
+        this.jahr = klasse;
     }
 
     public String getMail() {
@@ -95,4 +100,20 @@ public class Kunde extends AbstractEntity {
     public void setTel(String tel) {
         this.tel = tel;
     }
+
+   /* public int getProductId() {
+        return productId;
+    }
+
+    public void setProductId(int productId) {
+        this.productId = productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }*/
 }

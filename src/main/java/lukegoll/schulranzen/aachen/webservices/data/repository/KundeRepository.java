@@ -14,7 +14,7 @@ public interface KundeRepository extends JpaRepository<Kunde, Long> {
             "or lower(c.nachname) like lower(concat('%', :searchTerm, '%'))")
     List<Kunde> searchName(@Param("searchTerm") String searchTerm);
     @Query("select c from Kunde c " +
-            "where lower(c.klasse) like lower(concat('%', :searchTerm, '%')) ")
+            "where lower(c.jahr) like lower(concat('%', :searchTerm, '%')) ")
     List<Kunde> searchKlasse(@Param("searchTerm") String searchTerm);
 
 }

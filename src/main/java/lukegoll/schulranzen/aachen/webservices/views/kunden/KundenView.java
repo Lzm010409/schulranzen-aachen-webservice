@@ -2,6 +2,7 @@ package lukegoll.schulranzen.aachen.webservices.views.kunden;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -50,13 +51,14 @@ public class KundenView extends VerticalLayout {
     public void configureGrid() {
         grid.addClassNames("contact-grid");
         grid.setSizeFull();
-        grid.setColumns("klasse", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
+        grid.setColumns("jahr", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
         grid.getColumns().forEach(col -> col.setAutoWidth(true));
         grid.asSingleSelect().addValueChangeListener(event -> editKunde(event.getValue()));
     }
 
 
     public void configureForm() {
+
         form = new InputForm();
         form.setWidth("25em");
         form.addListener(InputForm.SaveEvent.class, this::saveKunde);

@@ -62,21 +62,23 @@ public class MailForm extends FormLayout {
         userData.setUsername(userData.getUsername());
         userData.setPassword(userData.getPassword());
         addClassName("contact-form");
+        text.setMinHeight("300px");
+        text.setMaxHeight("450px");
         mailBinder.forField(text).bind(TextArea::getValue, TextArea::setValue);
         add(absender, betreff, text,
                 createButtonsLayout());
     }
 
+
+
     private Component createButtonsLayout() {
         sendMails.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        cancel.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-        cancel.addClickShortcut(Key.ESCAPE);
         sendMails.addClickListener(buttonClickEvent -> sendMail());
         // sendMails.addClickListener(event -> validateAndSave());
         //cancel.addClickListener(event -> fireEvent(new CloseEvent(this)));
 
         //binder.addStatusChangeListener(e -> save.setEnabled(binder.isValid()));
-        return new HorizontalLayout(sendMails, cancel);
+        return new HorizontalLayout(sendMails);
     }
 
     private void sendMail() {

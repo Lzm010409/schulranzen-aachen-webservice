@@ -1,25 +1,18 @@
 package lukegoll.schulranzen.aachen.webservices.data;
 
-import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Provider;
 import lukegoll.schulranzen.aachen.webservices.data.repository.ProviderRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+
 @Service
-public class ProviderDataService {
+public class ProductDataService {
     private final ProviderRepository providerRepository;
 
-    public ProviderDataService(ProviderRepository providerRepository) {
+    public ProductDataService(ProviderRepository providerRepository) {
         this.providerRepository = providerRepository;
 
-    }
-    public List<Provider> findProvider(String stringFilter) {
-        if (stringFilter == null || stringFilter.isEmpty()) {
-            return providerRepository.findAll();
-        } else {
-            return providerRepository.searchName(stringFilter);
-        }
     }
 
     public List<Provider> findAllKunden() {

@@ -16,7 +16,7 @@ public class KundenGrid extends Grid<Kunde> {
     public KundenGrid(@Autowired KundeRepository kundeRepository) {
         super(Kunde.class);
         setItems(q -> kundeRepository.findAll(PageRequest.of(q.getPage(), q.getPageSize())).stream());
-        setColumns("id", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
+        setColumns("id", "vorname", "nachname", "adresse", "stadt", "mail", "tel", "productName","productId");
 
     }
 }

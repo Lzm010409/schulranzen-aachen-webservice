@@ -14,8 +14,8 @@ public class Login {
     private Session mailSession;
     private MailSender mailSender;
 
-    private String smtpHost = "smtp.vodafonemail.de";
-    private String smtpPort = "465";
+    //  private String smtpHost = "smtp.vodafonemail.de";
+    // private String smtpPort = "465";
 
 
     public void login(String smtpHost, String smtpPort, String username, String password) {
