@@ -8,6 +8,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
+import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.textfield.TextField;
@@ -15,31 +16,40 @@ import com.vaadin.flow.data.binder.BeanValidationBinder;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.binder.ValidationException;
 import com.vaadin.flow.shared.Registration;
+import lukegoll.schulranzen.aachen.webservices.data.ProductDataService;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Product;
+import lukegoll.schulranzen.aachen.webservices.views.converter.LocalDateConverter;
+import org.springframework.beans.factory.annotation.Autowired;
 
 public class InputForm extends FormLayout {
     Binder<Kunde> binderKunde = new BeanValidationBinder<>(Kunde.class);
-   // Binder<Product> binderProduct = new BeanValidationBinder<>(Product.class);
+    // Binder<Product> binderProduct = new BeanValidationBinder<>(Product.class);
     private Kunde kunde;
     private Product product;
+    private ProductDataService productDataService;
     TextField vorname = new TextField("Vorname");
     TextField nachname = new TextField("Nachname");
     TextField adresse = new TextField("Adresse");
     TextField plz = new TextField("Plz");
     TextField stadt = new TextField("Stadt");
-    TextField jahr = new TextField("Jahr");
+    DatePicker kaufdatum = new DatePicker("Kaufdatum");
     TextField mail = new TextField("Mail");
     TextField tel = new TextField("Telefon");
-   // ComboBox<Product> productName = new ComboBox<>("Produkt");
+    // ComboBox<Product> productName = new ComboBox<>("Produkt");
+
+    ComboBox<Product> productComboBox = new ComboBox<>("Produkte");
     Button save = new Button("Save");
     Button delete = new Button("Delete");
     Button close = new Button("Cancel");
 
-    public InputForm() {
+
+    public InputForm(ProductDataService productDataService) {
+        this.productDataService = productDataService;
         addClassName("contact-form");
-        binderKunde.bindInstanceFields(this);
-        add(vorname, nachname, adresse, plz, stadt, jahr, mail, tel,
+        configureKundenBinder();
+        configureProductComobBox();
+        add(vorname, nachname, adresse, plz, stadt, kaufdatum, mail, tel, productComboBox,
                 createButtonsLayout());
     }
 
@@ -59,6 +69,21 @@ public class InputForm extends FormLayout {
         return new HorizontalLayout(save, delete, close);
     }
 
+    private void configureProductComobBox() {
+        productComboBox.setItems(productDataService.findAll());
+        productComboBox.setItemLabelGenerator(Product::getProductName);
+        productComboBox.setAllowCustomValue(true);
+        productComboBox.addCustomValueSetListener(
+                e -> {
+                    String customValue = e.getDetail();
+                    Product product1 = new Product(customValue);
+                    /*productDataService.saveProduct(product1);
+                    productComboBox.setItems(productDataService.findAll());*/
+                    productComboBox.setValue(product1);
+                }
+        );
+    }
+
     public static abstract class KundeFormEvent extends ComponentEvent<InputForm> {
 
         private Kunde kunde;
@@ -71,22 +96,6 @@ public class InputForm extends FormLayout {
         public Kunde getKunde() {
             return this.kunde;
         }
-    }
-
-    public static abstract class ProductEvent extends ComponentEvent<ComboBox> {
-
-        private Product product;
-
-        protected ProductEvent(ComboBox<Product> source, Product product) {
-            super(source, false);
-            this.product = product;
-        }
-
-        public Product getProduct (){
-            return  this.product;
-        }
-
-
     }
 
     public void showDialog() {
@@ -104,16 +113,27 @@ public class InputForm extends FormLayout {
         binderKunde.readBean(kunde);
     }
 
+    private void configureDatePicker() {
+        DatePicker.DatePickerI18n singleFormatI18n = new DatePicker.DatePickerI18n();
+        singleFormatI18n.setDateFormat("yyyy-MM-dd");
+        kaufdatum.setI18n(singleFormatI18n);
+    }
+
+    private void configureKundenBinder() {
+        binderKunde.forField(vorname).bind(Kunde::getVorname, Kunde::setVorname);
+        binderKunde.forField(nachname).bind(Kunde::getNachname, Kunde::setNachname);
+        binderKunde.forField(adresse).bind(Kunde::getAdresse, Kunde::setAdresse);
+        binderKunde.forField(plz).bind(Kunde::getPlz, Kunde::setPlz);
+        binderKunde.forField(stadt).bind(Kunde::getStadt, Kunde::setStadt);
+        binderKunde.forField(kaufdatum).bind(Kunde::getKaufdatum, Kunde::setKaufdatum);
+        binderKunde.forField(mail).bind(Kunde::getMail, Kunde::setMail);
+        binderKunde.forField(tel).bind(Kunde::getTel, Kunde::setTel);
+    }
+
 
     public static class SaveEvent extends KundeFormEvent {
         SaveEvent(InputForm source, Kunde kunde) {
             super(source, kunde);
-        }
-    }
-
-    public static class SaveEventProduct extends ProductEvent {
-        SaveEventProduct(ComboBox<Product> source, Product product) {
-            super(source, product);
         }
     }
 
@@ -138,6 +158,7 @@ public class InputForm extends FormLayout {
     private void validateAndSaveKunde() {
         try {
             binderKunde.writeBean(kunde);
+            kunde.setProduct(productComboBox.getValue());
             fireEvent(new SaveEvent(this, kunde));
 
         } catch (ValidationException e) {

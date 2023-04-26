@@ -1,8 +1,12 @@
 package lukegoll.schulranzen.aachen.webservices.data.entity;
 
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
+import java.time.LocalDate;
 
 @Entity
 public class Kunde extends AbstractEntity {
@@ -21,21 +25,18 @@ public class Kunde extends AbstractEntity {
     @NotBlank
     private String stadt;
 
-    @NotBlank
-    private String jahr;
+
+    private LocalDate kaufdatum;
 
     @Email
-    @NotBlank
     private String mail;
 
-    @NotBlank
+
     private String tel;
 
-   /* @NotBlank
-    private String productName;
-    @NotBlank
-    private int productId;*/
-
+    @ManyToOne
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
 
     public String getVorname() {
         return vorname;
@@ -77,12 +78,20 @@ public class Kunde extends AbstractEntity {
         this.stadt = stadt;
     }
 
-    public String getJahr() {
-        return jahr;
+    public LocalDate getKaufdatum() {
+        return kaufdatum;
     }
 
-    public void setJahr(String klasse) {
-        this.jahr = klasse;
+    public void setKaufdatum(LocalDate kaufdatum) {
+        this.kaufdatum = kaufdatum;
+    }
+
+    public Product getProduct() {
+        return product;
+    }
+
+    public void setProduct(Product product) {
+        this.product = product;
     }
 
     public String getMail() {
@@ -99,6 +108,10 @@ public class Kunde extends AbstractEntity {
 
     public void setTel(String tel) {
         this.tel = tel;
+    }
+
+    public String getProductName() {
+        return this.product.getProductName();
     }
 
    /* public int getProductId() {

@@ -1,19 +1,26 @@
 package lukegoll.schulranzen.aachen.webservices.data.entity;
 
-import javax.persistence.Entity;
+import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
+import java.util.Set;
+
 @Entity
+@Table(name = "product")
 public class Product extends AbstractEntity {
 
     @NotBlank
     private String productName;
 
-    @NotBlank
-    private int productId;
+    @OneToMany (mappedBy = "product", fetch = FetchType.EAGER)
+    private Set<Kunde> kunden;
 
     public Product(){
 
     }
+    public Product(String productName) {
+        this.productName = productName;
+    }
+
 
     public String getProductName() {
         return productName;
@@ -23,11 +30,4 @@ public class Product extends AbstractEntity {
         this.productName = productName;
     }
 
-    public int getProductId() {
-        return productId;
-    }
-
-    public void setProductId(int productId) {
-        this.productId = productId;
-    }
 }

@@ -1,33 +1,38 @@
 package lukegoll.schulranzen.aachen.webservices.data;
 
+import lukegoll.schulranzen.aachen.webservices.data.entity.Product;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Provider;
+import lukegoll.schulranzen.aachen.webservices.data.repository.ProductRepository;
 import lukegoll.schulranzen.aachen.webservices.data.repository.ProviderRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 public class ProductDataService {
-    private final ProviderRepository providerRepository;
+    private final ProductRepository productRepository;
 
-    public ProductDataService(ProviderRepository providerRepository) {
-        this.providerRepository = providerRepository;
+    public ProductDataService(ProductRepository productRepository) {
+        this.productRepository = productRepository;
 
     }
 
-    public List<Provider> findAllKunden() {
-        return providerRepository.findAll();
+    public List<Product> findAll() {
+        return productRepository.findAll();
     }
 
-    public void deleteKunde(Provider provider) {
-        providerRepository.delete(provider);
+    @Transactional
+    public void deleteKunde(Product product) {
+        productRepository.delete(product);
     }
 
-    public void saveKunde(Provider provider) {
-        if (provider == null) {
+    @Transactional
+    public void saveProduct(Product product) {
+        if (product == null) {
             System.err.println("Contact is null. Are you sure you have connected your form to the application?");
             return;
         }
-        providerRepository.save(provider);
+        productRepository.save(product);
     }
 }

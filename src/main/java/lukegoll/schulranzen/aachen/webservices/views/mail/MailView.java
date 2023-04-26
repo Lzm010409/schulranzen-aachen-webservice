@@ -6,12 +6,16 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
@@ -50,14 +54,18 @@ public class MailView extends VerticalLayout {
     ProviderDataService providerDataService;
     Set<Kunde> kundenSet;
 
-//    MailForm mailForm;
-
+    //    MailForm mailForm;
+    DatePicker firstDate = new DatePicker();
+    DatePicker secondDate = new DatePicker();
     TextField filterText = new TextField();
     EmailField emailField = new EmailField();
     PasswordField passwordField = new PasswordField();
     ComboBox<Provider> providerComboBox = new ComboBox<>();
     Button signIn = new Button("Anmelden");
     Button openMailDialog = new Button("Mail versenden!");
+    Button dateSearchButton = new Button(new Icon(VaadinIcon.SEARCH));
+    Button resetFilterButton = new Button("Filter zurücksetzen");
+
     Dialog mailDialog = new Dialog();
     List<Kunde> liste = new ArrayList<>();
     Login login = new Login();
@@ -112,7 +120,10 @@ public class MailView extends VerticalLayout {
         content1.addClassName("content");
         content1.setSizeFull();
 */
-        VerticalLayout content = new VerticalLayout(createMailLogin(), filterText, grid, grid2, openMailDialog);
+        openMailDialog.setVisible(false);
+        filterText.addValueChangeListener(event -> updateList());
+        HorizontalLayout horizontalLayout = new HorizontalLayout(filterText, firstDate, secondDate, dateSearchButton, resetFilterButton);
+        VerticalLayout content = new VerticalLayout(createMailLogin(), horizontalLayout, grid, grid2, openMailDialog);
 
 
         return content;
@@ -128,7 +139,7 @@ public class MailView extends VerticalLayout {
 
         //passwordField.setHelperText("Das Passwort muss mit dem Mail-Account Passwort übereinstimmen, sonst können keine Mails versendet werden.");
         //signIn.addClickShortcut(Key.ENTER);
-        if (parseData(userDataPath) != null) {
+       /* if (parseData(userDataPath) != null) {
             String[] arr = parseData(userDataPath);
             userData.setUserMail(arr[0]);
             userData.setUsername(arr[0]);
@@ -162,7 +173,11 @@ public class MailView extends VerticalLayout {
             }
         } else {
             signIn.addClickListener(buttonClickEvent -> loginIn(emailField.getValue(), passwordField.getValue()));
-        }
+        }*/
+        signIn.addClickListener(buttonClickEvent -> loginIn(emailField.getValue(), passwordField.getValue()));
+        providerComboBox.setItems(providerDataService.findAllKunden());
+        providerComboBox.setItemLabelGenerator(Provider::getProviderName);
+        providerComboBox.setPlaceholder("Bitte zu erst den Provider wählen!");
         providerComboBox.addValueChangeListener(comboBoxProviderComponentValueChangeEvent -> setProviderData(providerComboBox.getValue()));
         HorizontalLayout mailLogin = new HorizontalLayout(providerComboBox, emailField, passwordField, signIn);
         return mailLogin;
@@ -171,17 +186,6 @@ public class MailView extends VerticalLayout {
     private void setProviderData(Provider value) {
         setSmtpHost(value.getSmtpHost());
         setSmtpPort(value.getSmtpPort());
-        try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(providerDataPath));
-            writer.write(getSmtpHost() + "#");
-            writer.write(getSmtpPort());
-            writer.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-
-        }
-
-        //    mailForm.setProvider(value);
         System.out.println("Smtp Host: " + smtpHost + "Smtp Port: " + smtpPort);
     }
 
@@ -193,10 +197,15 @@ public class MailView extends VerticalLayout {
                 userData.setUsername(user);
                 userData.setPassword(password);
                 //mailForm.setUserData(this.userData);
-                showSuccesNot();
+                showSuccesNot("Erfolgreich authentifiziert!");
                 filterText.setVisible(true);
                 grid.setVisible(true);
                 grid2.setVisible(true);
+                resetFilterButton.setVisible(true);
+                dateSearchButton.setVisible(true);
+                firstDate.setVisible(true);
+                secondDate.setVisible(true);
+                openMailDialog.setVisible(true);
                 //mailForm.setVisible(true);
                 try {
                     BufferedWriter writer = new BufferedWriter(new FileWriter(userDataPath));
@@ -210,7 +219,7 @@ public class MailView extends VerticalLayout {
 
             }
             if (exitcode == 1) {
-                showErrorNot();
+                showErrorNot("Authentifizierung fehlgeschlagen. Bitte E-Mail oder Passwort überprüfen!");
                 passwordField.clear();
             }
         } catch (Exception e) {
@@ -223,9 +232,10 @@ public class MailView extends VerticalLayout {
     public void configureGrid() {
         grid.addClassNames("contact-grid-mail");
         grid.setSizeFull();
-        grid.setColumns("jahr", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
+        grid.setColumns("kaufdatum", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
+        grid.addColumn(Kunde::getProductName).setHeader("Produkt");
         grid.getColumns().forEach(col -> col.setAutoWidth(true));
-        grid.setHeight("100");
+        grid.setHeight("500px");
         grid.setSelectionMode(Grid.SelectionMode.MULTI);
         grid.setVisible(false);
         grid.addSelectionListener(selectionEvent -> uebertrageKundenData(selectionEvent.getAllSelectedItems()));
@@ -252,8 +262,8 @@ public class MailView extends VerticalLayout {
             UI ui = buttonClickEvent.getSource().getUI().orElseThrow();
             ListenableFuture<String> future = sendMail();
             future.addCallback(
-                    successResult -> updateUi(ui, successResult),
-                    failureException -> updateUi(ui, failureException.getMessage())
+                    successResult -> updateUi(successResult),
+                    failureException -> showErrorNot(failureException.getMessage())
             );
 
         });
@@ -265,54 +275,30 @@ public class MailView extends VerticalLayout {
     public void configureGridSelectedKunden() {
         grid2.addClassNames("contact-grid-mail");
         grid2.setSizeFull();
-        grid2.setColumns("jahr", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
+        grid2.setColumns("kaufdatum", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
+        grid2.addColumn(Kunde::getProductName).setHeader("Produkt");
         grid2.getColumns().forEach(col -> col.setAutoWidth(true));
+        grid2.setHeight("500px");
         grid2.setVisible(false);
 
     }
 
     public void configureToolbar() {
-        filterText.setPlaceholder("Nach Klasse filtern...");
+        filterText.setPlaceholder("Nach Personen filtern...");
         filterText.setValueChangeMode(ValueChangeMode.LAZY);
         filterText.addValueChangeListener(event -> updateList());
+        dateSearchButton.addClickListener(buttonClickEvent -> updateListWithSelectedDates()
+        );
+        dateSearchButton.setVisible(false);
+        resetFilterButton.addClickListener(buttonClickEvent -> resetFilter());
+        resetFilterButton.setVisible(false);
+        firstDate.setPlaceholder("Von...");
+        firstDate.setVisible(false);
+        secondDate.setPlaceholder("Bis...");
+        secondDate.setVisible(false);
+
         filterText.setVisible(false);
 
-    }
-
-
-  /*  private void editMailForm(Set<Kunde> kundenSet) {
-        if (kundenSet.isEmpty()) {
-            closeEditor();
-        } else {
-            mailForm.setKundeSet(kundenSet);
-            addClassName("editing");
-
-
-        }
-    }
-
-    public void configureMailForm() {
-        mailForm = new MailForm(userData);
-        mailForm.setWidth("25em");
-        mailForm.setVisible(false);
-        // mailForm.addListener(MailForm.SendEvent.class, this::);
-        // mailForm.addListener(InputForm.CloseEvent.class, event -> closeEditor());
-    }
-
-    public void closeEditor() {
-        //mailForm.setMailAdress(null);
-        mailForm.setVisible(false);
-        removeClassName("editing");
-    }*/
-
-    private void updateUi(UI ui, String result) {
-        if (result != "") {
-            mailDialog.close();
-        }
-        ui.access(() -> {
-            Notification.show(result);
-            progressBar.setVisible(false);
-        });
     }
 
 
@@ -346,8 +332,8 @@ public class MailView extends VerticalLayout {
             return AsyncResult.forValue("Versenden von: " + counter + " Mails erfolgreich.");
         } catch (MessagingException e) {
             e.printStackTrace();
-            return AsyncResult.forValue("Mails wurden nicht gesendet, da ein Fehler beim versenden aufgetreten ist! Fehlercode: " +
-                    e.getMessage());
+            return AsyncResult.forExecutionException(new MessagingException("Mails wurden nicht gesendet, da ein Fehler beim versenden aufgetreten ist! Fehlercode: " +
+                    e.getMessage()));
         } catch (UnsupportedEncodingException e) {
             return AsyncResult.forValue("Mails wurden nicht gesendet, da die Mail nicht richtig codiert worden ist!" +
                     e.getMessage());
@@ -357,11 +343,11 @@ public class MailView extends VerticalLayout {
 
     }
 
-    public void showErrorNot() {
+    public void showErrorNot(String message) {
         Notification notification = new Notification();
         notification.addThemeVariants(NotificationVariant.LUMO_ERROR);
 
-        Div text = new Div(new Text("Authentifizierung fehlgeschlagen! E-Mail und Passwort überprüfen"));
+        Div text = new Div(new Text(message));
 
         Button closeButton = new Button(new Icon("lumo", "cross"));
         closeButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
@@ -377,11 +363,19 @@ public class MailView extends VerticalLayout {
         notification.open();
     }
 
-    public void showSuccesNot() {
+
+    private void updateUi(String message) {
+        if (!message.equals("")) {
+            mailDialog.close();
+        }
+        Notification.show(message);
+    }
+
+    public void showSuccesNot(String message) {
         Notification notification = new Notification();
         notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
 
-        Div text = new Div(new Text("Authentifizierung erfolgreich!"));
+        Div text = new Div(new Text(message));
 
         Button closeButton = new Button(new Icon("lumo", "cross"));
         closeButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
@@ -409,12 +403,36 @@ public class MailView extends VerticalLayout {
 
 
     }
+
+    public void resetFilter() {
+        firstDate.setValue(null);
+        secondDate.setValue(null);
+        updateList();
+    }
+
+    public void updateListWithSelectedDates() {
+        List<Kunde> kundenList = new ArrayList<>();
+        if (firstDate.getValue() == null && secondDate.getValue() == null) {
+            updateList();
+        }
+        if (firstDate.getValue() == null && secondDate.getValue() != null) {
+            kundenList = kundenDataService.getKundeBeforeDate(secondDate.getValue());
+        }
+        if (firstDate.getValue() != null && secondDate.getValue() == null) {
+            kundenList = kundenDataService.getKundenAfterDate(firstDate.getValue());
+        }
+        if (firstDate.getValue() != null && secondDate.getValue() != null) {
+            kundenList = kundenDataService.getKundenBetweenDates(firstDate.getValue(), secondDate.getValue());
+        }
+        grid.setItems(kundenList);
+    }
+
     private String stringToHtmlText(String text) {
         return HtmlEncoder.textToHTML(text);
     }
 
     public void updateList() {
-        grid.setItems(kundenDataService.findAllKundenWithKlasse(filterText.getValue()));
+        grid.setItems(kundenDataService.findAllKundenWithName(filterText.getValue()));
     }
 
     public Grid<Kunde> getGrid() {

@@ -2,8 +2,12 @@ package lukegoll.schulranzen.aachen.webservices.views.kunden;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
+import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.value.ValueChangeMode;
@@ -11,21 +15,35 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.component.textfield.TextField;
 import lukegoll.schulranzen.aachen.webservices.data.KundenDataService;
+import lukegoll.schulranzen.aachen.webservices.data.ProductDataService;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
 import lukegoll.schulranzen.aachen.webservices.list.InputForm;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
 
 import javax.annotation.security.PermitAll;
+import java.util.ArrayList;
+import java.util.List;
+
 @PageTitle("Kunden")
 @Route(value = "kunden", layout = MainLayout.class)
 public class KundenView extends VerticalLayout {
     Grid<Kunde> grid = new Grid<>(Kunde.class);
     KundenDataService kundenDataService;
+
+    ProductDataService productDataService;
     TextField filterText = new TextField();
+
+    DatePicker firstDate = new DatePicker();
+    DatePicker secondDate = new DatePicker();
+
+    Button dateSearchButton = new Button(new Icon(VaadinIcon.SEARCH));
+    Button resetFilterButton = new Button("Filter zurücksetzen");
+
     InputForm form;
 
 
-    public KundenView(KundenDataService kundenDataService) {
+    public KundenView(KundenDataService kundenDataService, ProductDataService productDataService) {
+        this.productDataService = productDataService;
         this.kundenDataService = kundenDataService;
         addClassName("list-view");
         setSizeFull();
@@ -51,15 +69,15 @@ public class KundenView extends VerticalLayout {
     public void configureGrid() {
         grid.addClassNames("contact-grid");
         grid.setSizeFull();
-        grid.setColumns("jahr", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
+        grid.setColumns("kaufdatum", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
+        grid.addColumn(Kunde::getProductName).setHeader("Produkt");
         grid.getColumns().forEach(col -> col.setAutoWidth(true));
         grid.asSingleSelect().addValueChangeListener(event -> editKunde(event.getValue()));
     }
 
 
     public void configureForm() {
-
-        form = new InputForm();
+        form = new InputForm(productDataService);
         form.setWidth("25em");
         form.addListener(InputForm.SaveEvent.class, this::saveKunde);
         form.addListener(InputForm.DeleteEvent.class, this::deleteKunde);
@@ -67,15 +85,20 @@ public class KundenView extends VerticalLayout {
     }
 
     public HorizontalLayout getToolbar() {
-        filterText.setPlaceholder("Nach Namen filtern...");
+        filterText.setPlaceholder("Nach Personen filtern...");
         filterText.setVisible(true);
         filterText.setValueChangeMode(ValueChangeMode.LAZY);
         filterText.addValueChangeListener(event -> updateList());
-
+        dateSearchButton.addClickListener(buttonClickEvent -> updateListWithSelectedDates()
+        );
+        resetFilterButton.addClickListener(buttonClickEvent -> resetFilter());
+        firstDate.setPlaceholder("Von...");
+        secondDate.setPlaceholder("Bis...");
         Button addKunde = new Button("Add Kunde");
         addKunde.addClickListener(event -> addKunde());
+        addKunde.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        HorizontalLayout toolbar = new HorizontalLayout(filterText, addKunde);
+        HorizontalLayout toolbar = new HorizontalLayout(filterText, firstDate, secondDate, dateSearchButton, resetFilterButton, addKunde);
         toolbar.addClassName("toolbar");
         return toolbar;
     }
@@ -87,6 +110,7 @@ public class KundenView extends VerticalLayout {
     }
 
     public void saveKunde(InputForm.SaveEvent event) {
+        productDataService.saveProduct(event.getKunde().getProduct());
         kundenDataService.saveKunde(event.getKunde());
         updateList();
         closeEditor();
@@ -94,6 +118,29 @@ public class KundenView extends VerticalLayout {
 
     public void updateList() {
         grid.setItems(kundenDataService.findAllKundenWithName(filterText.getValue()));
+    }
+
+    public void resetFilter(){
+        firstDate.setValue(null);
+        secondDate.setValue(null);
+        updateList();
+    }
+
+    public void updateListWithSelectedDates() {
+        List<Kunde> kundenList = new ArrayList<>();
+        if (firstDate.getValue() == null && secondDate.getValue() == null) {
+            updateList();
+        }
+        if (firstDate.getValue() == null && secondDate.getValue() != null) {
+            kundenList = kundenDataService.getKundeBeforeDate(secondDate.getValue());
+        }
+        if (firstDate.getValue() != null && secondDate.getValue() == null) {
+            kundenList = kundenDataService.getKundenAfterDate(firstDate.getValue());
+        }
+        if (firstDate.getValue() != null && secondDate.getValue() != null) {
+            kundenList = kundenDataService.getKundenBetweenDates(firstDate.getValue(), secondDate.getValue());
+        }
+        grid.setItems(kundenList);
     }
 
 
