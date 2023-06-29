@@ -10,12 +10,10 @@ import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
-import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
@@ -23,6 +21,8 @@ import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.upload.Upload;
+import com.vaadin.flow.component.upload.receivers.MultiFileMemoryBuffer;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -52,7 +52,11 @@ public class MailView extends VerticalLayout {
     Grid<Kunde> grid2 = new Grid<>(Kunde.class);
     KundenDataService kundenDataService;
     ProviderDataService providerDataService;
-    Set<Kunde> kundenSet;
+    Set<Kunde> kundenSet = new HashSet<>();
+
+    Set<Kunde> kundenSet2 = new HashSet<>();
+
+    Set<Kunde> selectedKunden = new HashSet<>();
 
     //    MailForm mailForm;
     DatePicker firstDate = new DatePicker();
@@ -75,6 +79,8 @@ public class MailView extends VerticalLayout {
     TextArea mailText = new TextArea("Nachricht");
     Button sendButton = new Button("Versenden!");
     Button schließenButton = new Button("Abbrechen!");
+    MultiFileMemoryBuffer multiFileMemoryBuffer = new MultiFileMemoryBuffer();
+    Upload multiFileUpload = new Upload(multiFileMemoryBuffer);
 
     ProgressBar progressBar = new ProgressBar();
 
@@ -109,7 +115,6 @@ public class MailView extends VerticalLayout {
         configureToolbar();
         add(getContent());
         updateList();
-
     }
 
 
@@ -236,9 +241,9 @@ public class MailView extends VerticalLayout {
         grid.addColumn(Kunde::getProductName).setHeader("Produkt");
         grid.getColumns().forEach(col -> col.setAutoWidth(true));
         grid.setHeight("500px");
-        grid.setSelectionMode(Grid.SelectionMode.MULTI);
+        grid.setSelectionMode(Grid.SelectionMode.SINGLE);
         grid.setVisible(false);
-        grid.addSelectionListener(selectionEvent -> uebertrageKundenData(selectionEvent.getAllSelectedItems()));
+        grid.addSelectionListener(selectionEvent -> uebertrageKundenData(selectionEvent.getFirstSelectedItem()));
         // grid.addSelectionListener(selectionEvent -> editMailForm(selectionEvent.getAllSelectedItems()));
 
     }
@@ -266,9 +271,10 @@ public class MailView extends VerticalLayout {
                     failureException -> showErrorNot(failureException.getMessage())
             );
 
+
         });
         HorizontalLayout buttonLayout = new HorizontalLayout(sendButton, schließenButton);
-        VerticalLayout verticalLayout = new VerticalLayout(absender, betreff, mailText, buttonLayout);
+        VerticalLayout verticalLayout = new VerticalLayout(absender, betreff, mailText, multiFileUpload, buttonLayout);
         mailDialog.add(verticalLayout);
     }
 
@@ -278,17 +284,25 @@ public class MailView extends VerticalLayout {
         grid2.setColumns("kaufdatum", "vorname", "nachname", "adresse", "stadt", "mail", "tel");
         grid2.addColumn(Kunde::getProductName).setHeader("Produkt");
         grid2.getColumns().forEach(col -> col.setAutoWidth(true));
-        grid2.setHeight("500px");
         grid2.setVisible(false);
+        grid2.addComponentColumn(person -> {
+            Button editButton = new Button("Löschen");
+            editButton.addClickListener(e -> {
+                kundenSet.remove(person);
+                grid2.setItems(kundenSet);
+            });
+            return editButton;
 
+
+        });
+        grid2.setHeight("500px");
     }
 
     public void configureToolbar() {
-        filterText.setPlaceholder("Nach Personen filtern...");
+        filterText.setPlaceholder("Nach Keyword filtern...");
         filterText.setValueChangeMode(ValueChangeMode.LAZY);
         filterText.addValueChangeListener(event -> updateList());
-        dateSearchButton.addClickListener(buttonClickEvent -> updateListWithSelectedDates()
-        );
+        dateSearchButton.addClickListener(buttonClickEvent -> updateListWithSelectedDates());
         dateSearchButton.setVisible(false);
         resetFilterButton.addClickListener(buttonClickEvent -> resetFilter());
         resetFilterButton.setVisible(false);
@@ -302,15 +316,38 @@ public class MailView extends VerticalLayout {
     }
 
 
-    private void uebertrageKundenData(Set<Kunde> kundenSet) {
-        if (kundenSet.isEmpty()) {
-            grid2.setVisible(false);
-        } else {
+    private void uebertrageKundenData(Optional<Kunde> kunde) {
+        if (kunde.isPresent()) {
+            if (!kundenSet.contains(kunde.get())) {
+                kundenSet.add(kunde.get());
+            }
             grid2.setItems(kundenSet);
-            grid2.setVisible(true);
-            this.kundenSet = kundenSet;
-
         }
+        if (kundenSet.size() > 0) {
+            grid2.setVisible(true);
+        }
+
+       /* if (this.kundenSet.size() < kundenSet.size()) {
+            for (Kunde kunde : kundenSet) {
+                if (!this.kundenSet.contains(kunde)) {
+                    this.kundenSet.add(kunde);
+                    continue;
+                }
+            }
+            grid2.setItems(this.kundenSet);
+            grid2.setVisible(true);
+        } else {
+            Set<Kunde> kundeSet = new HashSet<>();
+            for (Kunde kunde : this.kundenSet) {
+                if (!kundenSet.contains(kunde)) {
+                    continue;
+                }
+                kundeSet.add(kunde);
+            }
+            this.kundenSet = kundeSet;
+            grid2.setItems(this.kundenSet);
+            grid2.setVisible(true);
+        }*/
     }
 
     @Async
@@ -323,10 +360,11 @@ public class MailView extends VerticalLayout {
             mailSender.setMailSession(login.getMailSession());
             int counter = 0;
 
+
             for (int i = 0; i < temparr.length; i++) {
                 Kunde kunde = (Kunde) temparr[i];
                 System.out.println(kunde.getVorname());
-                mailSender.sendMail(userData.getUsername(), absender.getValue(), kunde.getMail(), betreff.getValue(), stringToHtmlText(mailText.getValue()));
+                mailSender.sendMail(userData.getUsername(), absender.getValue(), kunde.getMail(), betreff.getValue(), mailText.getValue(), multiFileMemoryBuffer);
                 counter += 1;
             }
             return AsyncResult.forValue("Versenden von: " + counter + " Mails erfolgreich.");
@@ -367,6 +405,8 @@ public class MailView extends VerticalLayout {
     private void updateUi(String message) {
         if (!message.equals("")) {
             mailDialog.close();
+            multiFileMemoryBuffer = new MultiFileMemoryBuffer();
+            multiFileUpload.clearFileList();
         }
         Notification.show(message);
     }
@@ -413,7 +453,7 @@ public class MailView extends VerticalLayout {
     public void updateListWithSelectedDates() {
         List<Kunde> kundenList = new ArrayList<>();
         if (firstDate.getValue() == null && secondDate.getValue() == null) {
-            updateList();
+            //updateList();
         }
         if (firstDate.getValue() == null && secondDate.getValue() != null) {
             kundenList = kundenDataService.getKundeBeforeDate(secondDate.getValue());
@@ -432,7 +472,7 @@ public class MailView extends VerticalLayout {
     }
 
     public void updateList() {
-        grid.setItems(kundenDataService.findAllKundenWithName(filterText.getValue()));
+        grid.setItems(kundenDataService.findAllEntriesWithKeyword(filterText.getValue()));
     }
 
     public Grid<Kunde> getGrid() {

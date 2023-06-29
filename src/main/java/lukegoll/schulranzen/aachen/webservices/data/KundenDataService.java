@@ -17,11 +17,11 @@ public class KundenDataService {
 
     }
 
-    public List<Kunde> findAllKundenWithName(String stringFilter) {
+    public List<Kunde> findAllEntriesWithKeyword(String stringFilter) {
         if (stringFilter == null || stringFilter.isEmpty()) {
             return kundeRepository.findAll();
         } else {
-            return kundeRepository.searchName(stringFilter);
+            return kundeRepository.searchKeyword(stringFilter);
         }
     }
 

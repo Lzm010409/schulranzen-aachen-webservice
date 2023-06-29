@@ -128,6 +128,7 @@ public class InputForm extends FormLayout {
         binderKunde.forField(kaufdatum).bind(Kunde::getKaufdatum, Kunde::setKaufdatum);
         binderKunde.forField(mail).bind(Kunde::getMail, Kunde::setMail);
         binderKunde.forField(tel).bind(Kunde::getTel, Kunde::setTel);
+        binderKunde.forField(productComboBox).bind(Kunde::getProduct, Kunde::setProduct);
     }
 
 

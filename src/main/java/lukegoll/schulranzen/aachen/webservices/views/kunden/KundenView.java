@@ -3,7 +3,6 @@ package lukegoll.schulranzen.aachen.webservices.views.kunden;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.icon.Icon;
@@ -20,7 +19,6 @@ import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
 import lukegoll.schulranzen.aachen.webservices.list.InputForm;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
 
-import javax.annotation.security.PermitAll;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -85,7 +83,7 @@ public class KundenView extends VerticalLayout {
     }
 
     public HorizontalLayout getToolbar() {
-        filterText.setPlaceholder("Nach Personen filtern...");
+        filterText.setPlaceholder("Nach Keyword filtern...");
         filterText.setVisible(true);
         filterText.setValueChangeMode(ValueChangeMode.LAZY);
         filterText.addValueChangeListener(event -> updateList());
@@ -94,7 +92,7 @@ public class KundenView extends VerticalLayout {
         resetFilterButton.addClickListener(buttonClickEvent -> resetFilter());
         firstDate.setPlaceholder("Von...");
         secondDate.setPlaceholder("Bis...");
-        Button addKunde = new Button("Add Kunde");
+        Button addKunde = new Button("Kunde hinzufügen");
         addKunde.addClickListener(event -> addKunde());
         addKunde.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
@@ -117,7 +115,7 @@ public class KundenView extends VerticalLayout {
     }
 
     public void updateList() {
-        grid.setItems(kundenDataService.findAllKundenWithName(filterText.getValue()));
+        grid.setItems(kundenDataService.findAllEntriesWithKeyword(filterText.getValue()));
     }
 
     public void resetFilter(){

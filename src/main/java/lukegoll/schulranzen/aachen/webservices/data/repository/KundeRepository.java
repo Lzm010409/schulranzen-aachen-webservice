@@ -12,8 +12,13 @@ public interface KundeRepository extends JpaRepository<Kunde, Long> {
 
     @Query("select c from Kunde c " +
             "where lower(c.vorname) like lower(concat('%', :searchTerm, '%')) " +
-            "or lower(c.nachname) like lower(concat('%', :searchTerm, '%'))")
-    List<Kunde> searchName(@Param("searchTerm") String searchTerm);
+            "or lower(c.nachname) like lower(concat('%', :searchTerm, '%'))" +
+            "or lower(c.adresse) like lower(concat('%', :searchTerm, '%'))" +
+            "or lower(c.stadt) like lower(concat('%', :searchTerm, '%'))" +
+            "or lower(c.mail) like lower(concat('%', :searchTerm, '%'))" +
+            "or lower(c.tel) like lower(concat('%', :searchTerm, '%'))" +
+            "or lower(c.product.productName) like lower(concat('%', :searchTerm, '%'))")
+    List<Kunde> searchKeyword(@Param("searchTerm") String searchTerm);
 
     List<Kunde> findAllByKaufdatumBetween(
             LocalDate entryDate,
