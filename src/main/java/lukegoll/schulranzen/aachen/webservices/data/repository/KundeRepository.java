@@ -15,6 +15,7 @@ public interface KundeRepository extends JpaRepository<Kunde, Long> {
             "or lower(c.nachname) like lower(concat('%', :searchTerm, '%'))" +
             "or lower(c.adresse) like lower(concat('%', :searchTerm, '%'))" +
             "or lower(c.stadt) like lower(concat('%', :searchTerm, '%'))" +
+            "or lower(c.plz) like lower(concat('%', :searchTerm, '%'))" +
             "or lower(c.mail) like lower(concat('%', :searchTerm, '%'))" +
             "or lower(c.tel) like lower(concat('%', :searchTerm, '%'))" +
             "or lower(c.product.productName) like lower(concat('%', :searchTerm, '%'))")

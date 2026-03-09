@@ -2,6 +2,7 @@ package lukegoll.schulranzen.aachen.webservices.data;
 
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
 import lukegoll.schulranzen.aachen.webservices.data.repository.KundeRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +46,15 @@ public class KundenDataService {
             return;
         }
         kundeRepository.save(kunde);
+    }
+
+    public List<Kunde> fetchKundenPaging(int offset, int limit) {
+        // Vaadin gibt Offset (Startpunkt) und Limit (Anzahl)
+        // Spring Data nutzt Page (Seitenzahl) und Size (Anzahl)
+        int page = offset / limit;
+
+        // Angenommen, dein Repository heißt 'kundenRepository'
+        return kundeRepository.findAll(PageRequest.of(page, limit)).getContent();
     }
 
     public List<Kunde> getKundenBetweenDates(LocalDate firstDate, LocalDate secondDate) {

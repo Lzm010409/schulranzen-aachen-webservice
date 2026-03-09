@@ -38,6 +38,21 @@ public class Kunde extends AbstractEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    public Kunde() {
+    }
+
+    public Kunde(String vorname, String nachname, String adresse, String plz, String stadt, LocalDate kaufdatum, String mail, String tel, Product product) {
+        this.vorname = vorname;
+        this.nachname = nachname;
+        this.adresse = adresse;
+        this.plz = plz;
+        this.stadt = stadt;
+        this.kaufdatum = kaufdatum;
+        this.mail = mail;
+        this.tel = tel;
+        this.product = product;
+    }
+
     public String getVorname() {
         return vorname;
     }

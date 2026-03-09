@@ -1,167 +1,113 @@
 package lukegoll.mail.send;
 
 import com.vaadin.flow.component.upload.receivers.MultiFileMemoryBuffer;
-import lukegoll.mail.data.ServerData;
-import lukegoll.mail.data.UserData;
-import lukegoll.mail.login.Login;
-import org.apache.catalina.User;
-
 import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import java.io.*;
+import java.time.LocalDate;
 import java.util.*;
 
 public class MailSender {
 
-
     private Session mailSession;
-    private String senderAdress;
-    private String senderName;
-    private String receiverAdress;
-    private String subject;
-    private String message;
+    // ... getter/setter für session etc ...
 
-    public void sendMail(String senderAdress, String senderName, String receiverAdress, String subject, String message) throws MessagingException, UnsupportedEncodingException {
-        if (mailSession == null) {
-            throw new IllegalStateException("Erst einloggen!");
+    /**
+     * Hilfsmethode zum Zusammenbauen des HTML Contents.
+     * Reagiert auf den Platzhalter {Content}
+     */
+    private String buildHtmlContent(String message, String htmlTemplate) {
+        // Zeilenumbrüche aus der TextArea in HTML-Breaks umwandeln, damit die Formatierung bleibt
+        String formattedMessage = message != null ? message.replace("\n", "<br>") : "";
+
+        if (htmlTemplate != null && !htmlTemplate.isEmpty() && htmlTemplate.contains("{Content}")) {
+            // Template Logik: Injiziere den Text in den Platzhalter
+            return htmlTemplate.replace("{Content}", formattedMessage);
+        } else if(htmlTemplate != null && !htmlTemplate.isEmpty()) {
+            // Möglichkeit ein HTML Template zu versenden, welches eventuell keinen {Content} braucht.
+            return htmlTemplate;
+        }else {
+            // Kein Template: Wir senden den Text direkt (als einfaches HTML)
+            // Falls der User schon HTML schreibt, ist das okay, ansonsten wrappen wir es minimal
+            return "<html><body>" + formattedMessage + "</body></html>";
         }
-
-        MimeMessage msg = new MimeMessage(mailSession);
-        msg.addHeader("Content-type", "text/HTML; charset=UTF-8");
-        msg.addHeader("format", "flowed");
-        msg.addHeader("Content-Transfer-Encoding", "8-bit");
-
-        msg.setFrom(new InternetAddress(senderAdress, senderName));
-        msg.setReplyTo(InternetAddress.parse(senderAdress, false));
-        msg.setSubject(subject, "UTF-8");
-        //msg.setText(message, "UTF-8");
-
-        msg.setContent(message, "text/html");
-        msg.setSentDate(new Date());
-
-        msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(receiverAdress, false));
-        System.out.println("Versende Mail....");
-        Transport.send(msg);
-        System.out.println("Mail Versendet!");
-
     }
 
-    public void sendMail(String senderAdress, String senderName, String receiverAdress, String subject, String message, MultiFileMemoryBuffer multiFileMemoryBuffer) throws MessagingException, UnsupportedEncodingException {
+    // --- Senden mit Attachments (FileBuffer) ---
+    public void sendMail(String senderAdress, String senderName, String receiverAdress, String subject,
+                         String message, String htmlTemplate, // NEU: htmlTemplate Parameter
+                         MultiFileMemoryBuffer multiFileMemoryBuffer) throws MessagingException, UnsupportedEncodingException {
+
+        if (mailSession == null) throw new IllegalStateException("Erst einloggen!");
+
+        MimeMessage msg = createBaseMessage(senderAdress, senderName, receiverAdress, subject);
+
+        // Content Logik anwenden
+        String finalHtmlContent = buildHtmlContent(message, htmlTemplate);
+
+        // BodyPart für den Text/HTML
+        BodyPart messageBodyPart = new MimeBodyPart();
+        messageBodyPart.setContent(finalHtmlContent, "text/html; charset=UTF-8");
+
+        Multipart multipart = new MimeMultipart();
+        multipart.addBodyPart(messageBodyPart);
+
+        // Attachments verarbeiten
         List<File> tempFileList = new ArrayList<>();
-        if (mailSession == null) {
-            throw new IllegalStateException("Erst einloggen!");
+        if (multiFileMemoryBuffer != null && !multiFileMemoryBuffer.getFiles().isEmpty()) {
+            processAttachments(multiFileMemoryBuffer, multipart, tempFileList);
         }
+
+        msg.setContent(multipart);
+        sendAndCleanup(msg, tempFileList);
+    }
+
+    // --- Helper Methoden für saubereren Code ---
+
+    private MimeMessage createBaseMessage(String sender, String senderName, String receiver, String subject) throws MessagingException, UnsupportedEncodingException {
         MimeMessage msg = new MimeMessage(mailSession);
         msg.addHeader("Content-type", "text/HTML; charset=UTF-8");
         msg.addHeader("format", "flowed");
         msg.addHeader("Content-Transfer-Encoding", "8-bit");
-
-        msg.setFrom(new InternetAddress(senderAdress, senderName));
-        msg.setReplyTo(InternetAddress.parse(senderAdress, false));
+        msg.setFrom(new InternetAddress(sender, senderName));
+        msg.setReplyTo(InternetAddress.parse(sender, false));
         msg.setSubject(subject, "UTF-8");
-        //msg.setText(message, "UTF-8");
-        BodyPart messageBodyPart = new MimeBodyPart();
-        messageBodyPart.setText(message);
-        Multipart multipart = new MimeMultipart();
-        if (multiFileMemoryBuffer != null && multiFileMemoryBuffer.getFiles().size() > 0) {
-            Iterator<String> fileIterator = multiFileMemoryBuffer.getFiles().iterator();
-            while (fileIterator.hasNext()) {
-                String fileName = fileIterator.next();
-                File file = new File(fileName);
-                tempFileList.add(file);
+        msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(receiver, false));
+        msg.setSentDate(new Date());
+        return msg;
+    }
+
+    private void processAttachments(MultiFileMemoryBuffer buffer, Multipart multipart, List<File> tempFiles) throws MessagingException {
+        for (String fileName : buffer.getFiles()) {
+            File file = new File(fileName);
+            tempFiles.add(file);
+            try (FileOutputStream fos = new FileOutputStream(file)) {
+                fos.write(buffer.getOutputBuffer(fileName).toByteArray());
+
                 MimeBodyPart attachmentPart = new MimeBodyPart();
-                try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
-                    byte[] arr = multiFileMemoryBuffer.getOutputBuffer(fileName).toByteArray();
-                    fileOutputStream.write(arr);
-                    attachmentPart.attachFile(file);
-                    multipart.addBodyPart(attachmentPart);
-                } catch (FileNotFoundException e) {
-                    throw new RuntimeException(e);
-
-                } catch (NullPointerException e) {
-
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                attachmentPart.attachFile(file);
+                multipart.addBodyPart(attachmentPart);
+            } catch (IOException e) {
+                e.printStackTrace(); // Logging wäre hier besser
             }
         }
-        multipart.addBodyPart(messageBodyPart);
-        msg.setContent(multipart);
-        msg.setSentDate(new
+    }
 
-                Date());
-
-
-        msg.setSentDate(new
-
-                Date());
-
-        msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(receiverAdress, false));
+    private void sendAndCleanup(MimeMessage msg, List<File> tempFiles) throws MessagingException {
         System.out.println("Versende Mail....");
         try {
             Transport.send(msg);
-        } catch (MessagingException e) {
-            throw new MessagingException("Nachricht konnte nicht versendet werden!");
+            System.out.println("Mail Versendet!");
         } finally {
-            if (tempFileList.size() > 0) {
-                for (File file : tempFileList) {
-                    file.delete();
-                }
-            }
+            // Aufräumen der temporären Dateien
+            tempFiles.forEach(File::delete);
         }
-        System.out.println("Mail Versendet!");
-
-    }
-
-
-    public Session getMailSession() {
-        return mailSession;
     }
 
     public void setMailSession(Session mailSession) {
         this.mailSession = mailSession;
-    }
-
-    public String getSenderAdress() {
-        return senderAdress;
-    }
-
-    public void setSenderAdress(String senderAdress) {
-        this.senderAdress = senderAdress;
-    }
-
-    public String getSenderName() {
-        return senderName;
-    }
-
-    public void setSenderName(String senderName) {
-        this.senderName = senderName;
-    }
-
-    public String getReceiverAdress() {
-        return receiverAdress;
-    }
-
-    public void setReceiverAdress(String receiverAdress) {
-        this.receiverAdress = receiverAdress;
-    }
-
-    public String getSubject() {
-        return subject;
-    }
-
-    public void setSubject(String subject) {
-        this.subject = subject;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
     }
 }

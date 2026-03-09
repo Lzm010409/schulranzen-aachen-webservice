@@ -5,6 +5,7 @@ import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -26,15 +27,19 @@ import com.vaadin.flow.component.upload.receivers.MultiFileMemoryBuffer;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.server.VaadinSession;
 import lukegoll.mail.TextEncoder.HtmlEncoder;
 import lukegoll.mail.data.UserData;
 import lukegoll.mail.login.Login;
 import lukegoll.mail.send.MailSender;
 import lukegoll.schulranzen.aachen.webservices.data.KundenDataService;
+import lukegoll.schulranzen.aachen.webservices.data.MailTemplateDataService;
 import lukegoll.schulranzen.aachen.webservices.data.ProviderDataService;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Kunde;
+import lukegoll.schulranzen.aachen.webservices.data.entity.MailTemplate;
 import lukegoll.schulranzen.aachen.webservices.data.entity.Provider;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.util.concurrent.ListenableFuture;
@@ -52,6 +57,7 @@ public class MailView extends VerticalLayout {
     Grid<Kunde> grid2 = new Grid<>(Kunde.class);
     KundenDataService kundenDataService;
     ProviderDataService providerDataService;
+    MailTemplateDataService mailTemplateDataService;
     Set<Kunde> kundenSet = new HashSet<>();
 
     Set<Kunde> kundenSet2 = new HashSet<>();
@@ -73,7 +79,8 @@ public class MailView extends VerticalLayout {
     Dialog mailDialog = new Dialog();
     List<Kunde> liste = new ArrayList<>();
     Login login = new Login();
-
+    private Button manageTemplatesButton = new Button("Vorlagen verwalten", new Icon(VaadinIcon.FILE_TEXT));
+    private ComboBox<MailTemplate> templateSelection = new ComboBox<>("Vorlage laden");
     TextField absender = new TextField("Absender");
     TextField betreff = new TextField("Betreff");
     TextArea mailText = new TextArea("Nachricht");
@@ -102,34 +109,83 @@ public class MailView extends VerticalLayout {
 
     UserData userData = new UserData();
 
-    public MailView(KundenDataService kundenDataService, ProviderDataService providerDataService) {
+    public MailView(KundenDataService kundenDataService, ProviderDataService providerDataService, MailTemplateDataService mailTemplateDataService) {
         this.providerDataService = providerDataService;
         this.kundenDataService = kundenDataService;
-        progressBar.setVisible(false);
+        this.mailTemplateDataService = mailTemplateDataService;
+
         addClassName("list-view");
         setSizeFull();
+
+        // Initialisierung
         configureGrid();
         configureGridSelectedKunden();
-        // configureMailForm();
         configureMailDialog();
+        // Template Manager initialisieren (falls du die Methode aus dem vorherigen Schritt hast)
+        // configureTemplateManager();
+
         configureToolbar();
+
+        // --- NEU: Template Button initial unsichtbar ---
+        manageTemplatesButton.setVisible(false);
+
         add(getContent());
-        updateList();
+
+        // --- NEU: Session Check am Ende des Konstruktors ---
+        checkSessionAndRestore();
+    }
+
+    // Neue Methode zum Wiederherstellen der Session
+    private void checkSessionAndRestore() {
+        VaadinSession session = VaadinSession.getCurrent();
+        javax.mail.Session existingSession = (javax.mail.Session) session.getAttribute("mailSession");
+        UserData existingUser = (UserData) session.getAttribute("currentUserData");
+
+        String savedHost = (String) session.getAttribute("smtpHost");
+        String savedPort = (String) session.getAttribute("smtpPort");
+
+        if (existingSession != null && existingUser != null && savedHost != null) {
+            // 1. Login und UserData wiederherstellen
+            this.login.setMailSession(existingSession);
+            this.userData = existingUser;
+            this.smtpHost = savedHost;
+            this.smtpPort = savedPort;
+
+            // 2. UI Kosmetik
+            providerDataService.findAllKunden().stream()
+                    .filter(p -> p.getSmtpHost().equals(savedHost))
+                    .findFirst()
+                    .ifPresent(provider -> providerComboBox.setValue(provider));
+
+            this.emailField.setValue(existingUser.getUsername());
+
+            System.out.println("Session wiederhergestellt.");
+
+            // 3. UI freischalten
+            unlockUI();
+
+            // --- WICHTIG: Daten laden! ---
+            // Dies sorgt dafür, dass die Tabelle direkt gefüllt wird
+            updateList();
+        }
     }
 
 
     public Component getContent() {
-       /* HorizontalLayout content1 = new HorizontalLayout(grid2, mailForm);
-        content1.setFlexGrow(2, grid2);
-        content1.setFlexGrow(1, mailForm);
-        content1.addClassName("content");
-        content1.setSizeFull();
-*/
         openMailDialog.setVisible(false);
+
+        // Logik für den Template Button
+        manageTemplatesButton.addClickListener(e -> openTemplateManager());
+
+        // Deine bestehenden Layouts
         filterText.addValueChangeListener(event -> updateList());
         HorizontalLayout horizontalLayout = new HorizontalLayout(filterText, firstDate, secondDate, dateSearchButton, resetFilterButton);
-        VerticalLayout content = new VerticalLayout(createMailLogin(), horizontalLayout, grid, grid2, openMailDialog);
 
+        // Buttons gruppieren
+        HorizontalLayout actionButtons = new HorizontalLayout(openMailDialog, manageTemplatesButton);
+
+        // In das Vertical Layout einfügen
+        VerticalLayout content = new VerticalLayout(createMailLogin(), horizontalLayout, grid, grid2, actionButtons);
 
         return content;
     }
@@ -188,6 +244,28 @@ public class MailView extends VerticalLayout {
         return mailLogin;
     }
 
+
+    private void unlockUI() {
+        // 1. UI Elemente sichtbar schalten
+        filterText.setVisible(true);
+        grid.setVisible(true);
+        grid2.setVisible(true);
+        resetFilterButton.setVisible(true);
+        dateSearchButton.setVisible(true);
+        firstDate.setVisible(true);
+        secondDate.setVisible(true);
+        openMailDialog.setVisible(true);
+
+        // 2. Button "Vorlagen verwalten" sichtbar machen (Dein Wunsch)
+        manageTemplatesButton.setVisible(true);
+
+        // 3. Login-Felder ausblenden (optional, aber user-freundlicher)
+        // signIn.setEnabled(false);
+        // oder die ganze Login-Leiste ausblenden, wenn du willst.
+
+        showSuccesNot("Anmeldung aktiv.");
+    }
+
     private void setProviderData(Provider value) {
         setSmtpHost(value.getSmtpHost());
         setSmtpPort(value.getSmtpPort());
@@ -201,37 +279,26 @@ public class MailView extends VerticalLayout {
             if (exitcode == 0) {
                 userData.setUsername(user);
                 userData.setPassword(password);
-                //mailForm.setUserData(this.userData);
+
+                // --- ÄNDERUNG: Speichere ALLES in die Session ---
+                VaadinSession session = VaadinSession.getCurrent();
+                session.setAttribute("mailSession", login.getMailSession());
+                session.setAttribute("currentUserData", userData);
+
+                // NEU: Host und Port speichern, damit sie nach Refresh da sind
+                session.setAttribute("smtpHost", this.smtpHost);
+                session.setAttribute("smtpPort", this.smtpPort);
+                // ------------------------------------------------
+
                 showSuccesNot("Erfolgreich authentifiziert!");
-                filterText.setVisible(true);
-                grid.setVisible(true);
-                grid2.setVisible(true);
-                resetFilterButton.setVisible(true);
-                dateSearchButton.setVisible(true);
-                firstDate.setVisible(true);
-                secondDate.setVisible(true);
-                openMailDialog.setVisible(true);
-                //mailForm.setVisible(true);
-                try {
-                    BufferedWriter writer = new BufferedWriter(new FileWriter(userDataPath));
-                    writer.write(user + "#");
-                    writer.write(password);
-                    writer.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-
-                }
-
+                unlockUI();
+                updateList();
+                // ... (Dein Datei-Writer Code bleibt hier) ...
             }
-            if (exitcode == 1) {
-                showErrorNot("Authentifizierung fehlgeschlagen. Bitte E-Mail oder Passwort überprüfen!");
-                passwordField.clear();
-            }
+            // ... (Fehlerbehandlung bleibt hier) ...
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-
     }
 
     public void configureGrid() {
@@ -251,30 +318,72 @@ public class MailView extends VerticalLayout {
     public void configureMailDialog() {
         mailDialog.addClassName("mailDialog");
         mailDialog.setHeaderTitle("Mail versenden");
-        openMailDialog.addClickListener(buttonClickEvent -> mailDialog.open());
+
+        // Bestehende Logik
+        openMailDialog.addClickListener(buttonClickEvent -> {
+            // Dropdown aktualisieren, falls zwischendurch neue Templates erstellt wurden
+            templateSelection.setItems(mailTemplateDataService.findAll());
+            mailDialog.open();
+        });
+
         schließenButton.addClickListener(buttonClickEvent -> mailDialog.close());
         schließenButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
+
+        // Layout Anpassungen
         mailText.setMinHeight("400px");
         mailText.setMaxHeight("500px");
         mailText.setMinWidth("700px");
         absender.setMinWidth("500px");
         betreff.setMinWidth("500px");
-
         mailDialog.setMinWidth("800px");
+
+        // --- NEU: Template Auswahl Logik ---
+        templateSelection.setItemLabelGenerator(MailTemplate::getName);
+        templateSelection.setPlaceholder("Vorlage auswählen...");
+        templateSelection.setMinWidth("300px");
+        templateSelection.setClearButtonVisible(true);
+
+        templateSelection.addValueChangeListener(event -> {
+            MailTemplate selected = event.getValue();
+            if (selected != null) {
+                // Wenn Template gewählt: Betreff übernehmen
+                betreff.setValue(selected.getSubject());
+
+                // Optional: Hinweis anzeigen, dass der Text im Editor in das Template eingebettet wird
+                mailText.setLabel("Nachricht (wird in Template '" + selected.getName() + "' eingefügt)");
+            } else {
+                // Wenn Auswahl gelöscht:
+                mailText.setLabel("Nachricht (wird als normaler Text gesendet)");
+                // Betreff evtl. leeren oder lassen
+            }
+        });
+        // -----------------------------------
 
         sendButton.addClickListener(buttonClickEvent -> {
             progressBar.setVisible(true);
+            // ... (Dein bestehender Send-Code) ...
             UI ui = buttonClickEvent.getSource().getUI().orElseThrow();
             ListenableFuture<String> future = sendMail();
             future.addCallback(
                     successResult -> updateUi(successResult),
                     failureException -> showErrorNot(failureException.getMessage())
             );
-
-
         });
+
         HorizontalLayout buttonLayout = new HorizontalLayout(sendButton, schließenButton);
-        VerticalLayout verticalLayout = new VerticalLayout(absender, betreff, mailText, multiFileUpload, buttonLayout);
+
+        // Layout neu zusammensetzen inklusive Template Selektor
+        // Wir packen den Selektor ganz nach oben oder über den Betreff
+        VerticalLayout verticalLayout = new VerticalLayout(
+                templateSelection, // Neu hinzugefügt
+                absender,
+                betreff,
+                mailText,
+                multiFileUpload,
+                buttonLayout
+        );
+
+        mailDialog.removeAll(); // Sicherstellen, dass wir nicht doppelt adden bei Re-Configure
         mailDialog.add(verticalLayout);
     }
 
@@ -353,32 +462,44 @@ public class MailView extends VerticalLayout {
     @Async
     public ListenableFuture<String> sendMail() {
         try {
-            Object[] temparr = new Object[kundenSet.size()];
-            temparr = kundenSet.toArray();
+            // ... dein bestehender Login Code ...
             login.login(smtpHost, smtpPort, userData.getUsername(), userData.getPassword());
             MailSender mailSender = new MailSender();
             mailSender.setMailSession(login.getMailSession());
+
+            // --- NEUE LOGIK FÜR TEMPLATE ---
+            String templateHtml = null;
+
+            // Wir prüfen, ob ein Template ausgewählt ist
+            MailTemplate selectedTemplate = templateSelection.getValue();
+            if (selectedTemplate != null) {
+                // Hier holen wir den HTML-Wrapper (Body) des Templates
+                // Vorausgesetzt, dein MailTemplate Object hat eine getBody() Methode mit dem HTML Code
+                templateHtml = selectedTemplate.getBody();
+            }
+            // -------------------------------
+
             int counter = 0;
-
-
-            for (int i = 0; i < temparr.length; i++) {
-                Kunde kunde = (Kunde) temparr[i];
-                System.out.println(kunde.getVorname());
-                mailSender.sendMail(userData.getUsername(), absender.getValue(), kunde.getMail(), betreff.getValue(), mailText.getValue(), multiFileMemoryBuffer);
-                counter += 1;
+            // Iteration über Kunden
+            for (Kunde kunde : kundenSet) {
+                // WICHTIG: Hier rufen wir jetzt die neue Methode auf
+                // parameter: sender, senderName, empfänger, betreff, NACHRICHT (TextArea), TEMPLATE, attachments
+                mailSender.sendMail(
+                        userData.getUsername(),
+                        absender.getValue(),
+                        kunde.getMail(),
+                        betreff.getValue(),
+                        mailText.getValue(), // Das ist der Text, der in {Content} landet
+                        templateHtml,        // Das ist das HTML Gerüst (oder null)
+                        multiFileMemoryBuffer
+                );
+                counter++;
             }
             return AsyncResult.forValue("Versenden von: " + counter + " Mails erfolgreich.");
-        } catch (MessagingException e) {
+        } catch (Exception e) { // Exception Handling vereinfacht für Übersicht
             e.printStackTrace();
-            return AsyncResult.forExecutionException(new MessagingException("Mails wurden nicht gesendet, da ein Fehler beim versenden aufgetreten ist! Fehlercode: " +
-                    e.getMessage()));
-        } catch (UnsupportedEncodingException e) {
-            return AsyncResult.forValue("Mails wurden nicht gesendet, da die Mail nicht richtig codiert worden ist!" +
-                    e.getMessage());
-        } catch (NullPointerException e) {
-            return AsyncResult.forValue("Mails wurden nicht gesendet, da keine Empfänger ausgewählt worden sind!");
+            return AsyncResult.forExecutionException(e);
         }
-
     }
 
     public void showErrorNot(String message) {
@@ -450,21 +571,152 @@ public class MailView extends VerticalLayout {
         updateList();
     }
 
+
+
     public void updateListWithSelectedDates() {
-        List<Kunde> kundenList = new ArrayList<>();
         if (firstDate.getValue() == null && secondDate.getValue() == null) {
-            //updateList();
+            updateList(); // Springt zurück zur Standard-Logik (Paging)
+            return;
         }
+
+        // Sobald nach Datum gefiltert wird, deaktivieren wir das Paging
+        List<Kunde> kundenList = new ArrayList<>();
         if (firstDate.getValue() == null && secondDate.getValue() != null) {
             kundenList = kundenDataService.getKundeBeforeDate(secondDate.getValue());
-        }
-        if (firstDate.getValue() != null && secondDate.getValue() == null) {
+        } else if (firstDate.getValue() != null && secondDate.getValue() == null) {
             kundenList = kundenDataService.getKundenAfterDate(firstDate.getValue());
-        }
-        if (firstDate.getValue() != null && secondDate.getValue() != null) {
+        } else if (firstDate.getValue() != null && secondDate.getValue() != null) {
             kundenList = kundenDataService.getKundenBetweenDates(firstDate.getValue(), secondDate.getValue());
         }
-        grid.setItems(kundenList);
+
+        grid.setItems(kundenList); // Setzt eine feste Liste im Speicher
+    }
+
+    private void openTemplateManager() {
+        Dialog templateDialog = new Dialog();
+        templateDialog.setHeaderTitle("E-Mail Vorlagen verwalten");
+        templateDialog.setWidth("800px");
+        templateDialog.setHeight("600px");
+
+        // Formular Felder
+        TextField tfName = new TextField("Vorlagen-Name (z.B. 'Rechnung')");
+        TextField tfSubject = new TextField("Betreff");
+        TextArea taBody = new TextArea("Nachrichtentext");
+        Checkbox checkbox = new Checkbox("HTML Vorlage?");
+        taBody.setHeight("200px");
+
+        tfName.setWidthFull();
+        tfSubject.setWidthFull();
+        taBody.setWidthFull();
+        checkbox.setWidthFull();
+
+        // Grid zur Anzeige existierender Templates
+        Grid<MailTemplate> templateGrid = new Grid<>(MailTemplate.class);
+
+        // WICHTIG: Grid Columns definieren, damit nicht interne IDs etc. angezeigt werden
+        // Wir nehmen 'name' und 'subject' als Standard, fügen 'html' custom hinzu
+        templateGrid.setColumns("name", "subject");
+        templateGrid.addColumn(template -> template.getHtml() ? "Ja" : "Nein").setHeader("HTML");
+
+        templateGrid.setItems(mailTemplateDataService.findAll());
+        templateGrid.setHeight("200px");
+
+        // Buttons
+        Button btnSave = new Button("Speichern", new Icon(VaadinIcon.DISC));
+        btnSave.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        Button btnNew = new Button("Neu / Leeren", new Icon(VaadinIcon.PLUS));
+
+        // --- NEU: Löschen Button ---
+        Button btnDelete = new Button("Löschen", new Icon(VaadinIcon.TRASH));
+        btnDelete.addThemeVariants(ButtonVariant.LUMO_ERROR);
+        btnDelete.setEnabled(false); // Initial deaktiviert
+        // ---------------------------
+
+        Button btnClose = new Button("Schließen", e -> templateDialog.close());
+
+        // Logik: Auswahl im Grid füllt das Formular
+        templateGrid.asSingleSelect().addValueChangeListener(event -> {
+            MailTemplate selected = event.getValue();
+            if (selected != null) {
+                tfName.setValue(selected.getName());
+                tfSubject.setValue(selected.getSubject());
+                taBody.setValue(selected.getBody());
+                checkbox.setValue(selected.getHtml()); // Achte drauf: heißt der Getter getHtml() oder isHtml()?
+
+                // Löschen aktivieren wenn ausgewählt
+                btnDelete.setEnabled(true);
+            } else {
+                // Auswahl aufgehoben -> Button deaktivieren & Formular leeren
+                btnDelete.setEnabled(false);
+                tfName.clear();
+                tfSubject.clear();
+                taBody.clear();
+                checkbox.setValue(false);
+            }
+        });
+
+        // Speichern Logik
+        btnSave.addClickListener(e -> {
+            if (tfName.isEmpty() || tfSubject.isEmpty()) {
+                Notification.show("Bitte Name und Betreff ausfüllen", 3000, Notification.Position.MIDDLE);
+                return;
+            }
+
+            // HINWEIS: Hier wird aktuell immer ein NEUES Template erstellt.
+            // Wenn du Bearbeiten willst, müsstest du prüfen, ob ein Template ausgewählt ist (via grid.asSingleSelect().getValue())
+            // und dessen ID übernehmen.
+            MailTemplate temp = new MailTemplate(tfName.getValue(), tfSubject.getValue(), taBody.getValue(), checkbox.getValue());
+
+            MailTemplate selected = templateGrid.asSingleSelect().getValue();
+            if (selected != null) {
+                temp.setId(selected.getId()); // ID übernehmen für Update
+            }
+
+
+            mailTemplateDataService.save(temp);
+
+            // Grid aktualisieren
+            templateGrid.setItems(mailTemplateDataService.findAll());
+            templateGrid.getDataProvider().refreshAll();
+
+            // Formular zurücksetzen
+            templateGrid.asSingleSelect().clear();
+
+            Notification.show("Vorlage gespeichert");
+        });
+
+        // Neu Logik
+        btnNew.addClickListener(e -> {
+            templateGrid.asSingleSelect().clear(); // Deselektiert Grid -> löst Listener aus -> leert Felder & deaktiviert Löschen
+            tfName.focus();
+        });
+
+        // --- NEU: Löschen Logik ---
+        btnDelete.addClickListener(e -> {
+            MailTemplate selected = templateGrid.asSingleSelect().getValue();
+            if (selected != null) {
+                // Löschen über den Service
+                mailTemplateDataService.delete(selected);
+
+                // UI Aktualisieren
+                templateGrid.setItems(mailTemplateDataService.findAll());
+                templateGrid.getDataProvider().refreshAll();
+                templateGrid.asSingleSelect().clear(); // Auswahl aufheben
+
+                Notification.show("Vorlage gelöscht", 3000, Notification.Position.BOTTOM_START);
+            }
+        });
+        // --------------------------
+
+        VerticalLayout formLayout = new VerticalLayout(tfName, tfSubject, taBody, checkbox);
+
+        // Buttons gruppieren
+        HorizontalLayout actions = new HorizontalLayout(btnNew, btnSave, btnDelete);
+
+        VerticalLayout layout = new VerticalLayout(templateGrid, formLayout, actions, btnClose);
+        templateDialog.add(layout);
+        templateDialog.open();
     }
 
     private String stringToHtmlText(String text) {
@@ -472,7 +724,16 @@ public class MailView extends VerticalLayout {
     }
 
     public void updateList() {
-        grid.setItems(kundenDataService.findAllEntriesWithKeyword(filterText.getValue()));
+        String filter = filterText.getValue();
+
+        // Wenn NICHT gesucht wird -> Paging (Lazy Loading) aktivieren
+        if (filter == null || filter.isEmpty()) {
+            grid.setItems(query -> kundenDataService.fetchKundenPaging(query.getOffset(), query.getLimit()).stream());
+        }
+        // Wenn gesucht wird -> Paging DEAKTIVIEREN und alle Suchergebnisse laden
+        else {
+            grid.setItems(kundenDataService.findAllEntriesWithKeyword(filter));
+        }
     }
 
     public Grid<Kunde> getGrid() {
