@@ -27,9 +27,11 @@
     "next": "^16.3.1",
     "nodemailer": "^9.0.5",
     "pg": "^8.23.0",
+    "prisma": "^7.9.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "sanitize-html": "2.14.0",
+    "tsx": "4.19.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -42,9 +44,7 @@
     "@types/sanitize-html": "2.13.0",
     "playwright": "^1.62.1",
     "postcss": "8.4.49",
-    "prisma": "^7.9.1",
     "tailwindcss": "^4.3.3",
-    "tsx": "4.19.2",
     "typescript": "5.7.2",
     "vitest": "2.1.8"
   }
