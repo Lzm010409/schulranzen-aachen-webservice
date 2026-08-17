@@ -1,0 +1,395 @@
+// Schulranzen-Aachen-Webservice — Datenmodell v2
+//
+// Nachfolger des Hibernate-Schemas aus der Vaadin-Anwendung. Jede aus dem
+// Altsystem uebernommene Zeile behaelt ihre alte ID in `legacyId`, damit der
+// ETL-Import wiederholbar bleibt (siehe scripts/etl/import.ts).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------- Benutzer
+
+enum Role {
+  ADMIN
+  MITARBEITER
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role      @default(MITARBEITER)
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions   Session[]
+  auditLogs  AuditLog[]
+  campaigns  Campaign[]
+  exportLogs ExportLog[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  userAgent String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("session")
+}
+
+/// Fehlgeschlagene Logins, Basis fuer das Rate-Limit am Login-Endpunkt.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+  @@map("login_attempt")
+}
+
+// ---------------------------------------------------------------- Stammdaten
+
+model Product {
+  id     String  @id @default(cuid())
+  /// Anzeigename, so wie der Nutzer ihn eingibt.
+  name   String
+  /// Kleingeschrieben und normalisiert — verhindert "Ranzen XY" vs. "ranzen xy".
+  slug   String  @unique
+  category String?
+  season   String?
+  active   Boolean @default(true)
+
+  legacyId  BigInt?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchases Purchase[]
+
+  @@index([active])
+  @@map("product")
+}
+
+model Customer {
+  id        String  @id @default(cuid())
+  firstName String
+  lastName  String
+  street    String
+  zip       String
+  city      String
+  /// Immer klein und getrimmt gespeichert.
+  email     String?
+  phone     String?
+  notes     String?
+
+  /// Gesetzt, sobald der Kunde sich ueber den Abmeldelink austraegt.
+  unsubscribedAt DateTime?
+  /// Gesetzt bei Hard-Bounce; solche Adressen werden nicht mehr angeschrieben.
+  bouncedAt      DateTime?
+
+  legacyId  BigInt?   @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  /// Soft-Delete: gefuellt heisst geloescht, Datensatz bleibt wiederherstellbar.
+  deletedAt DateTime?
+
+  purchases Purchase[]
+  mailJobs  MailJob[]
+
+  @@index([lastName, firstName])
+  @@index([email])
+  @@index([zip])
+  @@index([deletedAt])
+  @@map("customer")
+}
+
+/// Ein Kauf. Loest die starre Kunde-hat-genau-ein-Produkt-Beziehung des
+/// Altsystems ab; ein Kunde kann jetzt mehrfach kaufen.
+model Purchase {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  purchasedAt DateTime? @db.Date
+  note        String?
+
+  legacyId  BigInt?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([productId])
+  @@index([purchasedAt])
+  @@map("purchase")
+}
+
+// ---------------------------------------------------------------- Mailversand
+
+enum SmtpSecurity {
+  /// Port 465 — TLS von der ersten Verbindung an.
+  SSL
+  /// Port 587/25 — Klartextverbindung, die per STARTTLS hochgestuft wird.
+  STARTTLS
+}
+
+model Provider {
+  id       String       @id @default(cuid())
+  name     String       @unique
+  host     String
+  port     Int
+  security SmtpSecurity @default(SSL)
+
+  legacyId  BigInt?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts MailAccount[]
+
+  @@map("provider")
+}
+
+/// Zentral hinterlegtes Absenderkonto. Das Passwort liegt AES-256-GCM
+/// verschluesselt in `passwordEnc` (Schluessel aus ENCRYPTION_KEY).
+model MailAccount {
+  id          String   @id @default(cuid())
+  label       String
+  providerId  String
+  provider    Provider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  username    String
+  passwordEnc String
+  fromEmail   String
+  fromName    String
+  /// Genau ein Konto ist Standard; wird per Transaktion sichergestellt.
+  isDefault   Boolean  @default(false)
+
+  lastVerifiedAt DateTime?
+  lastError      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaigns Campaign[]
+
+  @@map("mail_account")
+}
+
+model MailTemplate {
+  id      String  @id @default(cuid())
+  name    String
+  subject String
+  body    String
+  isHtml  Boolean @default(true)
+  category String?
+  /// Wird bei jeder Aenderung hochgezaehlt; alte Staende liegen in mail_template_version.
+  version Int     @default(1)
+
+  legacyId  BigInt?   @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  versions  MailTemplateVersion[]
+  campaigns Campaign[]
+
+  @@index([deletedAt])
+  @@map("mail_template")
+}
+
+model MailTemplateVersion {
+  id         String       @id @default(cuid())
+  templateId String
+  template   MailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  version    Int
+  name       String
+  subject    String
+  body       String
+  isHtml     Boolean
+  createdAt  DateTime     @default(now())
+
+  @@unique([templateId, version])
+  @@map("mail_template_version")
+}
+
+enum CampaignStatus {
+  /// Wird noch bearbeitet, es ist nichts versendet.
+  DRAFT
+  /// Freigegeben, der Worker arbeitet die Warteschlange ab.
+  SENDING
+  /// Alle Jobs sind endgueltig (versendet, fehlgeschlagen oder uebersprungen).
+  DONE
+  /// Vom Benutzer angehalten; laufende Jobs bleiben liegen.
+  PAUSED
+  CANCELLED
+}
+
+model Campaign {
+  id         String         @id @default(cuid())
+  name       String
+  status     CampaignStatus @default(DRAFT)
+  subject    String
+  body       String
+  templateId String?
+  template   MailTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  accountId  String
+  account    MailAccount    @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  jobs        MailJob[]
+  attachments CampaignAttachment[]
+
+  @@index([status])
+  @@map("campaign")
+}
+
+/// Anhaenge liegen in der Datenbank statt auf einem Volume: sie sind damit
+/// automatisch im Backup und der Container bleibt zustandslos.
+model CampaignAttachment {
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  filename    String
+  contentType String
+  size        Int
+  data        Bytes
+  createdAt   DateTime @default(now())
+
+  @@index([campaignId])
+  @@map("campaign_attachment")
+}
+
+enum MailJobStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  /// Kein Versand: keine Adresse, abgemeldet oder Bounce-Historie.
+  SKIPPED
+}
+
+model MailJob {
+  id         String        @id @default(cuid())
+  campaignId String
+  campaign   Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  customerId String?
+  customer   Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  /// Zum Versandzeitpunkt eingefrorene Adresse — bleibt auch dann korrekt,
+  /// wenn der Kundendatensatz spaeter geaendert wird.
+  toEmail String
+  toName  String
+
+  status   MailJobStatus @default(PENDING)
+  attempts Int           @default(0)
+  error    String?
+  /// Frueheste erneute Zustellung nach einem Fehlversuch (exponentielles Backoff).
+  nextAttemptAt DateTime  @default(now())
+  sentAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([campaignId, customerId])
+  @@index([status, nextAttemptAt])
+  @@index([campaignId, status])
+  @@map("mail_job")
+}
+
+// ---------------------------------------------------------------- Segmente
+
+/// Gespeicherter Filterstand, wiederverwendbar als Empfaengerquelle.
+model Segment {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  /// Serialisierte Filterkriterien, siehe src/lib/customer-filter.ts
+  filter    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("segment")
+}
+
+// ---------------------------------------------------------------- Protokolle
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+  LOGIN
+  LOGIN_FAILED
+  LOGOUT
+  EXPORT
+  SEND
+  MERGE
+}
+
+model AuditLog {
+  id       String      @id @default(cuid())
+  userId   String?
+  user     User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  entity   String
+  entityId String?
+  action   AuditAction
+  /// { feld: { von, auf } } — nur die tatsaechlich geaenderten Felder.
+  diff     Json?
+  ip       String?
+  createdAt DateTime   @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+model ExportLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  format    String
+  rowCount  Int
+  /// Der Filter, der dem Export zugrunde lag.
+  filter    Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("export_log")
+}
+
+/// Protokoll der ETL-Laeufe aus dem Altsystem.
+model MigrationRun {
+  id         String    @id @default(cuid())
+  source     String
+  dryRun     Boolean
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  /// Zaehler und Auffaelligkeiten des Laufs.
+  report     Json?
+  error      String?
+
+  @@map("migration_run")
+}

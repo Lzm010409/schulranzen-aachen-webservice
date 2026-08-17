@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: oklch(0.97 0.02 250);
+  --color-brand-100: oklch(0.93 0.04 250);
+  --color-brand-500: oklch(0.58 0.16 250);
+  --color-brand-600: oklch(0.51 0.16 250);
+  --color-brand-700: oklch(0.44 0.14 250);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* ------------------------------------------------------------ Bausteine */
+
+@utility card {
+  @apply rounded-lg border border-slate-200 bg-white shadow-sm;
+}
+
+@utility label-text {
+  @apply mb-1 block text-sm font-medium text-slate-700;
+}
+
+@utility field {
+  @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm
+    shadow-sm outline-none transition
+    placeholder:text-slate-400
+    focus:border-brand-500 focus:ring-2 focus:ring-brand-100
+    disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2
+    text-sm font-medium transition select-none
+    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500
+    disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility btn-primary {
+  @apply bg-brand-600 text-white hover:bg-brand-700;
+}
+
+@utility btn-secondary {
+  @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+}
+
+@utility btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700;
+}
+
+@utility btn-ghost {
+  @apply text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+}
+
+@utility badge {
+  @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+}
+
+@utility table-cell-compact {
+  @apply px-3 py-2 text-sm;
+}
