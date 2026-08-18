@@ -137,6 +137,30 @@ Jeder bekannte Platzhalter bekommt beim Versand einen Wert, notfalls einen
 leeren. Sonst stünde beim Empfänger wörtlich `{{vorname}}` in der Mail — was
 passierte, wenn ein Kunde zwischen Einreihen und Versand gelöscht wurde.
 
+## Mailtauglichkeit
+
+Was im Browser gut aussieht, kommt in einem Mailprogramm nicht automatisch an.
+Gmail entfernt `<html>`, `<head>` und `<body>`, kürzt Nachrichten ab etwa
+102 KB und zeigt eingebettete Bilder (`data:`) gar nicht; Outlook rendert mit
+Word und kennt weder `overflow` noch zuverlässig `background` im style-Attribut.
+
+`src/lib/mail-check.ts` prüft eine Vorlage darauf und zeigt die Befunde direkt
+im Editor, solange sich noch etwas ändern lässt:
+
+- **Fehler**: Nachricht über 102 KB · eingebettete Bilder · Schrift steht nur am `<body>`
+- **Hinweis**: nahe an der Grenze · `<style>`-Block · `position`, `float`,
+  `background-image`, negative Abstände · Bilder ohne `width` oder Alternativtext ·
+  farbige Zellen ohne `bgcolor`
+
+Für die mitgelieferten Vorlagen ist die Prüfung Teil der Testsuite — eine
+Verschlechterung fällt damit auf, bevor jemand die Mail vor sich hat.
+
+> **Bilder gehören ins Netz, nicht in die Mail.** Ein Mailprogramm lädt Bilder
+> über ihre Adresse; es hat keinen Zugriff auf diese Anwendung. Solange für
+> `schulranzen.gollenstede.app` kein DNS-Eintrag existiert, lädt kein Bild von
+> dort — bei niemandem. Bis dahin Bilder auf der Website ablegen und deren
+> Adresse eintragen.
+
 ## Rückmeldung und Ladezustand
 
 Jede Änderung meldet sich: gespeichert, angelegt, gelöscht, wiederhergestellt,
@@ -237,7 +261,7 @@ openssl rand -base64 32       # für ENCRYPTION_KEY (muss genau 32 Byte sein)
 ## Tests
 
 ```bash
-npm test                      # 191 Tests: Normalisierung, Mailaufbau, Export,
+npm test                      # 218 Tests: Normalisierung, Mailaufbau, Export,
                               # SMTP-Fehler, Rechte, Import, Versandstrecke
 npm run typecheck
 
@@ -287,6 +311,7 @@ src/
     flash.ts          zentrale Rückmeldung nach jeder Änderung
     season.ts         Einschulungsjahrgang aus dem Kaufdatum
     pagination.ts     Seite und Seitengröße aus URL, Cookie und Vorgabe
+    mail-check.ts     prüft Vorlagen auf das, woran Mailprogramme scheitern
     permissions.ts    Rechtekatalog, Vorlagen, abhängige Rechte
     crypto.ts         Passwort-Hash (scrypt), AES-256-GCM
     queue.ts          Empfänger einreihen, Fortschritt, Wiederholung

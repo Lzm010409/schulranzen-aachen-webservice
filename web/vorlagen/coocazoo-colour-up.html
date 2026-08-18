@@ -14,16 +14,20 @@
   Kommentare wie dieser werden beim Versand entfernt, sie erscheinen nur hier
   im Editor.
 
-  Das Produktbild liegt unter public/bilder/ und ist damit unter der eigenen
-  Domain erreichbar. Fehlt es, bleibt der Platz farbig stehen und der
-  Alternativtext wird angezeigt — die Mail sieht auch dann vollstaendig aus.
+  BILD: Die Adresse unten muss aus dem Postfach des Empfaengers erreichbar
+  sein — ein Mailprogramm laedt Bilder aus dem Netz, nicht aus dieser
+  Anwendung. Solange fuer schulranzen.gollenstede.app kein DNS-Eintrag
+  existiert, laedt dieses Bild bei niemandem. Bis dahin: Bild auf der
+  Website ablegen und deren Adresse eintragen.
+
+  Eingebettete Bilder (data:) sind kein Ausweg — Gmail zeigt sie gar nicht an.
 -->
 
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px">
   Kostenloses Graffiti für Rucksack-Anhänger und Patch — jetzt Termin sichern.
 </div>
 
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e9f5f3">
+<table bgcolor="#e9f5f3" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e9f5f3;font-family:Arial,Helvetica,sans-serif;color:#18181b">
   <tr>
     <td align="center" style="padding:24px 12px">
 
@@ -101,7 +105,7 @@
 
         <!-- ================================================== Kampagnentext -->
         <tr>
-          <td style="padding:28px 32px 8px;font-size:15px;line-height:1.65;color:#18181b">
+          <td style="padding:28px 32px 8px;font-size:15px;line-height:1.65;color:#18181b;font-family:Arial,Helvetica,sans-serif">
             <p style="margin:0 0 16px">{{anrede}},</p>
             {{content}}
           </td>
@@ -143,8 +147,8 @@
 
         <!-- ======================================================= Abschluss -->
         <tr>
-          <td style="padding:16px 32px 28px;font-size:15px;line-height:1.65;color:#18181b">
-            <p style="margin:0">Herzliche Grüße<br>Ihr Team von Schulranzen-Aachen</p>
+          <td style="padding:16px 32px 28px;font-size:15px;line-height:1.65;color:#18181b;font-family:Arial,Helvetica,sans-serif">
+            <p style="margin:0">Herzliche Grüße<br>Ihr Team vom Schulranzen Fachcenter Aachen-Brand</p>
           </td>
         </tr>
 
@@ -153,16 +157,18 @@
           <td bgcolor="#111111" style="background:#111111;padding:22px 32px">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td style="font-size:12px;line-height:1.7;color:#a1a1aa">
-                  <strong style="color:#ffffff">Schulranzen-Aachen</strong><br>
-                  Musterstraße 1 · 52062 Aachen · Telefon 0241 123456
+                <td style="font-size:12px;line-height:1.7;color:#a1a1aa;font-family:Arial,Helvetica,sans-serif">
+                  <strong style="color:#ffffff">Schulranzen Fachcenter Aachen-Brand</strong><br>
+                  Trierer Straße 785 · 52078 Aachen · Telefon 0241 99030773
                 </td>
-                <td align="right" valign="top" style="font-size:11px;letter-spacing:1px;color:#71717a;text-transform:uppercase">
+                <td align="right" valign="top" style="font-size:11px;letter-spacing:1px;color:#71717a;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif">
                   powered by<br><strong style="color:#ffffff">Molotow</strong>
                 </td>
               </tr>
               <tr>
-                <td colspan="2" style="padding-top:14px;font-size:11px;color:#71717a">
+                <td colspan="2" style="padding-top:14px;font-size:11px;color:#71717a;font-family:Arial,Helvetica,sans-serif">
+                  <a href="https://www.schulranzen-fachcenter-aachen.de/impressum" style="color:#a1a1aa">Impressum</a> ·
+                  <a href="https://www.schulranzen-fachcenter-aachen.de/datenschutzerkl%C3%A4rung" style="color:#a1a1aa">Datenschutz</a> ·
                   Keine weiteren E-Mails? <a href="{{abmeldelink}}" style="color:#a1a1aa">Hier abmelden</a>.
                 </td>
               </tr>

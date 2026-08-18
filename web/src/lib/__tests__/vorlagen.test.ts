@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { renderEmail } from "../template";
+import { pruefeMailtauglichkeit } from "../mail-check";
 import {
   MAX_BODY_LENGTH,
   describeBodyLength,
@@ -264,5 +265,41 @@ describe("Grenze für die Größe einer Vorlage", () => {
 
   it("zählt lesbar", () => {
     expect(describeBodyLength(1234)).toBe("1.234 von 5.000.000 Zeichen");
+  });
+});
+
+/**
+ * Jede mitgelieferte Vorlage muss die Mailtauglichkeitspruefung bestehen.
+ * Sonst faellt eine Verschlechterung erst auf, wenn ein Kunde die Mail vor
+ * sich hat.
+ */
+describe.each([
+  ["coocazoo Colour Up", "coocazoo-colour-up.html"],
+  ["Neutral", "standard-neutral.html"],
+  ["Klassik", "standard-klassik.html"],
+  ["Aktion", "standard-aktion.html"],
+  ["Brief", "standard-brief.html"],
+])("Mailtauglichkeit der Vorlage „%s“", (_name, datei) => {
+  const vorlage = layout(datei);
+
+  it("hat keinen Befund", () => {
+    const befunde = pruefeMailtauglichkeit(vorlage);
+    expect(
+      befunde.map((b) => `${b.schwere}: ${b.titel}`),
+      "Befunde der Mailtauglichkeitsprüfung",
+    ).toEqual([]);
+  });
+
+  it("bleibt weit unter Gmails Grenze", () => {
+    // Auch mit Kampagnentext und Platzhaltern muss Luft bleiben.
+    const { html } = render("Ein Absatz Text.", vorlage);
+    expect(Buffer.byteLength(html, "utf8")).toBeLessThan(60_000);
+  });
+
+  it("trägt die Schrift auch außerhalb von <body>", () => {
+    // Gmail entfernt <body>; ohne diese Angabe käme die Mail in der
+    // Standardschrift des Programms an.
+    const ohneBody = vorlage.replace(/<body[^>]*>/i, "<body>");
+    expect(ohneBody).toMatch(/font-family/);
   });
 });

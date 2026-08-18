@@ -12,6 +12,7 @@ import {
 } from "@/components/ui";
 import { PLACEHOLDERS } from "@/lib/template";
 import { MAX_BODY_LENGTH, describeBodyLength } from "@/lib/validation";
+import { pruefeMailtauglichkeit } from "@/lib/mail-check";
 import { saveTemplateAction, type TemplateFormState } from "./actions";
 
 export type TemplateValues = {
@@ -57,6 +58,9 @@ export function TemplateEditor({
       hasUnsubscribe: found.some((k) => k.toLowerCase() === "abmeldelink"),
     };
   }, [body]);
+
+  // Mailtauglichkeit laufend prüfen, nicht erst beim Versand.
+  const befunde = useMemo(() => pruefeMailtauglichkeit(body), [body]);
 
   const previewHtml = useMemo(() => {
     const sample: Record<string, string> = {
@@ -199,6 +203,26 @@ export function TemplateEditor({
               <Alert variant="info" title="Kein Abmeldelink">
                 Er wird beim Versand automatisch unten angefügt. Mit{" "}
                 <code>{"{{abmeldelink}}"}</code> platzieren Sie ihn selbst.
+              </Alert>
+            ) : null}
+
+            {/* Was im Browser gut aussieht, muss in einem Mailprogramm noch
+                lange nicht ankommen. Diese Prüfung nennt die bekannten
+                Stolperstellen, solange sich die Vorlage noch ändern lässt. */}
+            {befunde.map((befund, index) => (
+              <Alert
+                key={index}
+                variant={befund.schwere === "fehler" ? "error" : "warning"}
+                title={befund.titel}
+              >
+                {befund.text}
+              </Alert>
+            ))}
+
+            {befunde.length === 0 ? (
+              <Alert variant="success" title="Für Mailprogramme geeignet">
+                Keine der bekannten Stolperstellen gefunden — Größe, Bilder,
+                Gestaltung.
               </Alert>
             ) : null}
           </div>
