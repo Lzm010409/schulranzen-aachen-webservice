@@ -1018,3 +1018,26 @@ table.grid a {
   font-size: var(--lumo-font-size-s);
   color: var(--lumo-secondary-text-color);
 }
+
+/* Seitengröße unter einer Tabelle */
+.pagination-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lumo-space-m);
+}
+
+.page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--lumo-font-size-s);
+  color: var(--lumo-secondary-text-color);
+}
+
+.page-size-select {
+  width: auto;
+  min-width: 4.5rem;
+  padding-top: 0.15rem;
+  padding-bottom: 0.15rem;
+}

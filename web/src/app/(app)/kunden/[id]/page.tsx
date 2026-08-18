@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { Pagination } from "@/components/pagination";
+import { readPaging } from "@/lib/pagination";
 import { seasonLabel } from "@/lib/season";
 import {
   deleteCustomerAction,
@@ -25,7 +26,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 20;
+/** Vorgabe, solange nichts anderes gewählt wurde — aus der Auswahlliste. */
+const STANDARD_SEITENGROESSE = 25;
 
 export default async function CustomerDetailPage({
   params,
@@ -38,10 +40,20 @@ export default async function CustomerDetailPage({
   const { id } = await params;
   const flags = await searchParams;
 
-  // Drei Tabellen auf einer Seite, also drei eigene Seitenzahlen.
-  const purchasePage = Math.max(1, Number(flags.kaeufe ?? 1) || 1);
-  const mailPage = Math.max(1, Number(flags.mails ?? 1) || 1);
-  const historyPage = Math.max(1, Number(flags.verlauf ?? 1) || 1);
+  // Drei Tabellen auf einer Seite, also drei eigene Seitenzahlen — und drei
+  // eigene Seitengrößen.
+  const kaeufe = await readPaging(flags, {
+    pageParam: "kaeufe",
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
+  const mails = await readPaging(flags, {
+    pageParam: "mails",
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
+  const verlauf = await readPaging(flags, {
+    pageParam: "verlauf",
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
 
   const customer = await db.customer.findUnique({ where: { id } });
   if (!customer) notFound();
@@ -59,24 +71,24 @@ export default async function CustomerDetailPage({
       where: { customerId: id },
       orderBy: [{ purchasedAt: "desc" }, { createdAt: "desc" }],
       include: { product: { include: { category: true } } },
-      skip: (purchasePage - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: kaeufe.skip,
+      take: kaeufe.take,
     }),
     db.mailJob.count({ where: { customerId: id } }),
     db.mailJob.findMany({
       where: { customerId: id },
       orderBy: { createdAt: "desc" },
       include: { campaign: { select: { id: true, name: true } } },
-      skip: (mailPage - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: mails.skip,
+      take: mails.take,
     }),
     db.auditLog.count({ where: { entity: "Customer", entityId: id } }),
     db.auditLog.findMany({
       where: { entity: "Customer", entityId: id },
       orderBy: { createdAt: "desc" },
       include: { user: { select: { name: true } } },
-      skip: (historyPage - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: verlauf.skip,
+      take: verlauf.take,
     }),
   ]);
 
@@ -185,8 +197,8 @@ export default async function CustomerDetailPage({
             )}
 
             <Pagination
-              page={purchasePage}
-              pageSize={PAGE_SIZE}
+              page={kaeufe.page}
+              pageSize={kaeufe.pageSize}
               total={purchaseTotal}
               params={flags}
               paramName="kaeufe"
@@ -231,8 +243,8 @@ export default async function CustomerDetailPage({
             )}
 
             <Pagination
-              page={mailPage}
-              pageSize={PAGE_SIZE}
+              page={mails.page}
+              pageSize={mails.pageSize}
               total={mailTotal}
               params={flags}
               paramName="mails"
@@ -308,8 +320,8 @@ export default async function CustomerDetailPage({
             )}
 
             <Pagination
-              page={historyPage}
-              pageSize={PAGE_SIZE}
+              page={verlauf.page}
+              pageSize={verlauf.pageSize}
               total={historyTotal}
               params={flags}
               paramName="verlauf"

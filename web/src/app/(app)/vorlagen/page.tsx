@@ -12,11 +12,13 @@ import {
   formatDateTime,
 } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
+import { readPaging } from "@/lib/pagination";
 
 export const metadata = { title: "Vorlagen" };
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 25;
+/** Vorgabe, solange nichts anderes gewählt wurde. */
+const STANDARD_SEITENGROESSE = 25;
 
 export default async function TemplatesPage({
   searchParams,
@@ -25,7 +27,9 @@ export default async function TemplatesPage({
 }) {
   await requirePermissionOrRedirect("vorlagen.ansehen");
   const params = await searchParams;
-  const page = Math.max(1, Number(params.seite ?? 1) || 1);
+  const { page, pageSize, skip, take } = await readPaging(params, {
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
 
   const where = { deletedAt: null };
   const [total, templates] = await Promise.all([
@@ -34,8 +38,8 @@ export default async function TemplatesPage({
       where,
       orderBy: [{ category: "asc" }, { name: "asc" }],
       include: { _count: { select: { campaigns: true } } },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip,
+      take,
     }),
   ]);
 
@@ -112,7 +116,7 @@ export default async function TemplatesPage({
 
       <Pagination
         page={page}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         total={total}
         params={params}
       />

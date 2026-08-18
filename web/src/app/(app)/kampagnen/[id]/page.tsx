@@ -17,6 +17,7 @@ import {
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { Pagination } from "@/components/pagination";
+import { readPaging } from "@/lib/pagination";
 import { LiveProgress } from "../live-progress";
 import {
   cancelCampaignAction,
@@ -30,7 +31,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 25;
+/** Vorgabe, solange nichts anderes gewählt wurde. */
+const STANDARD_SEITENGROESSE = 25;
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Entwurf",
@@ -83,8 +85,14 @@ export default async function CampaignDetailPage({
   // Zwei Tabellen auf einer Seite, also zwei eigene Seitenzahlen. Eine
   // Kampagne kann zehntausend Empfaenger haben — beide Listen werden
   // seitenweise geholt, nie am Stueck.
-  const failedPage = Math.max(1, Number(flags.fehler ?? 1) || 1);
-  const recipientPage = Math.max(1, Number(flags.empfaenger ?? 1) || 1);
+  const fehlerSeite = await readPaging(flags, {
+    pageParam: "fehler",
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
+  const empfaenger = await readPaging(flags, {
+    pageParam: "empfaenger",
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
 
   const [progress, failedTotal, failed, recipientTotal, recipients] =
     await Promise.all([
@@ -93,15 +101,15 @@ export default async function CampaignDetailPage({
       db.mailJob.findMany({
         where: { campaignId: id, status: "FAILED" },
         orderBy: { updatedAt: "desc" },
-        skip: (failedPage - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
+        skip: fehlerSeite.skip,
+        take: fehlerSeite.take,
       }),
       db.mailJob.count({ where: { campaignId: id } }),
       db.mailJob.findMany({
         where: { campaignId: id },
         orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
-        skip: (recipientPage - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
+        skip: empfaenger.skip,
+        take: empfaenger.take,
       }),
     ]);
 
@@ -243,8 +251,8 @@ export default async function CampaignDetailPage({
               </Table>
 
               <Pagination
-                page={failedPage}
-                pageSize={PAGE_SIZE}
+                page={fehlerSeite.page}
+                pageSize={fehlerSeite.pageSize}
                 total={failedTotal}
                 params={flags}
                 paramName="fehler"
@@ -288,8 +296,8 @@ export default async function CampaignDetailPage({
               </Table>
 
               <Pagination
-                page={recipientPage}
-                pageSize={PAGE_SIZE}
+                page={empfaenger.page}
+                pageSize={empfaenger.pageSize}
                 total={recipientTotal}
                 params={flags}
                 paramName="empfaenger"

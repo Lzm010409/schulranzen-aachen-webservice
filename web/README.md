@@ -120,9 +120,20 @@ Kampagnen, Benutzer, Mailkonten, Provider, Protokoll, Sitzungen, bisherige
 Fassungen einer Vorlage).
 
 Unter jeder Tabelle steht, welcher Ausschnitt gerade zu sehen ist
-(„51–100 von 12.000"). Stehen mehrere Tabellen auf einer Seite, hat jede ihre
-eigene Seitenzahl und stört die anderen nicht. Die Seitenzahl steht in der URL
-und übersteht Filter, Sortierung und einen Reload.
+(„51–100 von 12.000"), daneben die **Seitengröße**: 10, 25, 50, 100 oder 200
+Zeilen. Stehen mehrere Tabellen auf einer Seite, hat jede ihre eigene
+Seitenzahl und ihre eigene Größe und stört die anderen nicht.
+
+Beides steht in der URL und übersteht Filter, Sortierung und einen Reload. Die
+zuletzt gewählte Größe merkt sich zusätzlich ein Cookie und gilt dann als
+Vorgabe für alle übrigen Tabellen — einmal auf 100 gestellt, bleibt es dabei.
+Die Adresse sticht dabei immer die gemerkte Wahl, damit ein geteilter Link
+zeigt, was der Absender gesehen hat.
+
+Die Auswahl ist bewusst eine feste Liste (`src/lib/pagination.ts`). Ein freies
+Feld ließe `?proSeite=999999` zu — und damit holte die Kundenliste zwölftausend
+Datensätze auf einmal. Werte außerhalb der Liste werden verworfen, in der URL
+wie im Cookie.
 
 ## Oberfläche
 
@@ -181,7 +192,7 @@ openssl rand -base64 32       # für ENCRYPTION_KEY (muss genau 32 Byte sein)
 ## Tests
 
 ```bash
-npm test                      # 137 Tests: Normalisierung, Mailaufbau, Export,
+npm test                      # 149 Tests: Normalisierung, Mailaufbau, Export,
                               # SMTP-Fehler, Rechte, Import, Versandstrecke
 npm run typecheck
 
@@ -192,7 +203,7 @@ node scripts/import-check.mjs http://localhost:3000 legacy.dump  # 18 Prüfungen
 # Die Browser-Prüfungen greifen auf denselben Auslieferungsstand zu, den der
 # Server geladen hat — nach einem `npm run build` den Server neu starten,
 # sonst passen Server- und Browser-Bundle nicht zusammen.
-node scripts/pagination-check.mjs http://localhost:3000          # 17 Prüfungen
+node scripts/pagination-check.mjs http://localhost:3000          # 24 Prüfungen
 node scripts/feedback-check.mjs http://localhost:3000            # 17 Prüfungen
 node scripts/kategorie-check.mjs http://localhost:3000 \
   postgresql://…/testdatenbank                                   # 16 Prüfungen
@@ -229,6 +240,7 @@ src/
     auth.ts           Sitzungen, Rechteprüfung, Rate-Limit
     flash.ts          zentrale Rückmeldung nach jeder Änderung
     season.ts         Einschulungsjahrgang aus dem Kaufdatum
+    pagination.ts     Seite und Seitengröße aus URL, Cookie und Vorgabe
     permissions.ts    Rechtekatalog, Vorlagen, abhängige Rechte
     crypto.ts         Passwort-Hash (scrypt), AES-256-GCM
     queue.ts          Empfänger einreihen, Fortschritt, Wiederholung

@@ -153,6 +153,69 @@ try {
     check("Kampagne: beide Seitenzahlen wirken unabhängig", true, "übersprungen");
   }
 
+  // ------------------------------------------------------ Seitengröße
+  await page.goto(`${B}/kunden`);
+  await settle();
+  const auswahl = page.locator(".page-size-select").first();
+  check("Unter der Tabelle steht eine Auswahl für die Seitengröße",
+    (await auswahl.count()) > 0);
+
+  // Nach der Auswahl laeuft ein Seitenwechsel; die Adresse aendert sich erst,
+  // wenn er durch ist — bei zwölftausend Kunden dauert das laenger als ein
+  // fester Wartewert.
+  await auswahl.selectOption("100");
+  await page.waitForURL(/proSeite=100/, { timeout: 30000 }).catch(() => undefined);
+  await settle();
+  let zeilen = await page.locator("tbody tr").count();
+  check("Die gewählte Größe wirkt sofort",
+    zeilen === 100 && page.url().includes("proSeite=100"),
+    `${zeilen} Zeilen, ${new URL(page.url()).search}`);
+
+  check("Die Auswahl zeigt die aktive Größe",
+    (await page.locator(".page-size-select").first().inputValue()) === "100");
+
+  // Nach dem Umstellen darf keine Seite übrig bleiben, die es nicht mehr gibt.
+  await page.goto(`${B}/kunden?seite=200`);
+  await settle();
+  await page.locator(".page-size-select").first().selectOption("200");
+  await page.waitForURL(/proSeite=200/, { timeout: 30000 }).catch(() => undefined);
+  await settle();
+  check("Beim Umstellen geht es zurück auf die erste Seite",
+    !page.url().includes("seite=200"), new URL(page.url()).search);
+
+  // Die Wahl gilt auch auf einer anderen Liste — ohne sie erneut zu treffen.
+  await page.goto(`${B}/produkte`);
+  await settle();
+  check("Die Wahl wirkt auch auf anderen Listen",
+    (await page.locator(".page-size-select").first().inputValue()) === "200",
+    await page.locator(".page-size-select").first().inputValue());
+
+  // Zurücksetzen für die folgenden Prüfungen.
+  await page.locator(".page-size-select").first().selectOption("50");
+  await page.waitForURL(/proSeite=50/, { timeout: 30000 }).catch(() => undefined);
+  await settle();
+
+  // Eine erfundene Größe darf nicht durchschlagen.
+  await page.goto(`${B}/kunden?proSeite=999999`);
+  await settle();
+  zeilen = await page.locator("tbody tr").count();
+  check("Eine erfundene Größe wird abgewiesen", zeilen <= 200, `${zeilen} Zeilen`);
+
+  // In der Kundenakte blättern drei Tabellen getrennt — auch in der Größe.
+  await page.goto(`${B}/kunden`);
+  await settle();
+  const kundeHref = await page
+    .locator('tbody tr a[href^="/kunden/"]')
+    .first()
+    .getAttribute("href");
+  await page.goto(`${B}${kundeHref}?kaeufeProSeite=100&mailsProSeite=10`);
+  await settle();
+  const groessen = await page.locator(".page-size-select").allInnerTexts();
+  check("Jede Tabelle einer Seite hat ihre eigene Größe",
+    groessen.length >= 1 &&
+      page.url().includes("kaeufeProSeite=100") &&
+      page.url().includes("mailsProSeite=10"));
+
   // Eine unsinnige Seitenzahl darf die Seite nicht zerlegen.
   await page.goto(`${B}/kunden?seite=99999`);
   await settle();

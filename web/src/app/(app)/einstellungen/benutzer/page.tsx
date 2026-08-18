@@ -11,6 +11,7 @@ import {
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { Pagination } from "@/components/pagination";
+import { readPaging } from "@/lib/pagination";
 import { PERMISSIONS } from "@/lib/permissions";
 import { deleteUserAction } from "../actions";
 import { UserEditor } from "./user-editor";
@@ -18,7 +19,8 @@ import { UserEditor } from "./user-editor";
 export const metadata = { title: "Benutzer" };
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 25;
+/** Vorgabe, solange nichts anderes gewählt wurde. */
+const STANDARD_SEITENGROESSE = 25;
 
 export default async function UsersPage({
   searchParams,
@@ -27,7 +29,9 @@ export default async function UsersPage({
 }) {
   const current = await requireUser();
   const params = await searchParams;
-  const page = Math.max(1, Number(params.seite ?? 1) || 1);
+  const { page, pageSize, skip, take } = await readPaging(params, {
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
 
   if (current.role !== "ADMIN") {
     return (
@@ -41,8 +45,8 @@ export default async function UsersPage({
     db.user.count(),
     db.user.findMany({
       orderBy: [{ active: "desc" }, { name: "asc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip,
+      take,
     }),
   ]);
 
@@ -139,7 +143,7 @@ export default async function UsersPage({
 
         <Pagination
           page={page}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           total={total}
           params={params}
         />

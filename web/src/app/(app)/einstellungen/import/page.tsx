@@ -2,13 +2,15 @@ import { db } from "@/lib/db";
 import { requirePermissionOrRedirect } from "@/lib/auth";
 import { Card, Table, Td, Th, formatDateTime } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
+import { readPaging } from "@/lib/pagination";
 import { LegacyImportForm } from "./legacy-form";
 import { TableImportForm } from "./table-form";
 
 export const metadata = { title: "Import" };
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 10;
+/** Vorgabe, solange nichts anderes gewählt wurde. */
+const STANDARD_SEITENGROESSE = 10;
 
 export default async function ImportPage({
   searchParams,
@@ -17,14 +19,16 @@ export default async function ImportPage({
 }) {
   await requirePermissionOrRedirect("daten.importieren");
   const params = await searchParams;
-  const page = Math.max(1, Number(params.seite ?? 1) || 1);
+  const { page, pageSize, skip, take } = await readPaging(params, {
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
 
   const [runTotal, runs] = await Promise.all([
     db.migrationRun.count(),
     db.migrationRun.findMany({
       orderBy: { startedAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip,
+      take,
     }),
   ]);
 
@@ -74,7 +78,7 @@ export default async function ImportPage({
 
           <Pagination
             page={page}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             total={runTotal}
             params={params}
           />

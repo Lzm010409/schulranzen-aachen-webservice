@@ -2,12 +2,14 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { Badge, Card, Table, Td, Th, formatDateTime } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
+import { readPaging } from "@/lib/pagination";
 import { PasswordForm } from "./password-form";
 
 export const metadata = { title: "Mein Konto" };
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 10;
+/** Vorgabe, solange nichts anderes gewählt wurde. */
+const STANDARD_SEITENGROESSE = 10;
 
 export default async function AccountPage({
   searchParams,
@@ -16,7 +18,9 @@ export default async function AccountPage({
 }) {
   const user = await requireUser();
   const params = await searchParams;
-  const page = Math.max(1, Number(params.seite ?? 1) || 1);
+  const { page, pageSize, skip, take } = await readPaging(params, {
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
 
   const where = { userId: user.id, expiresAt: { gt: new Date() } };
   const [record, sessionTotal, sessions] = await Promise.all([
@@ -25,8 +29,8 @@ export default async function AccountPage({
     db.session.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip,
+      take,
     }),
   ]);
 
@@ -105,7 +109,7 @@ export default async function AccountPage({
 
         <Pagination
           page={page}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           total={sessionTotal}
           params={params}
         />

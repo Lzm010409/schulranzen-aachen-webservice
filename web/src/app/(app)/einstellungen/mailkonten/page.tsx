@@ -20,11 +20,13 @@ import {
 import { AccountEditor } from "./account-editor";
 import { ProviderEditor } from "./provider-editor";
 import { Pagination } from "@/components/pagination";
+import { readPaging } from "@/lib/pagination";
 
 export const metadata = { title: "Mailkonten" };
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 25;
+/** Vorgabe, solange nichts anderes gewählt wurde. */
+const STANDARD_SEITENGROESSE = 25;
 
 export default async function MailAccountsPage({
   searchParams,
@@ -34,9 +36,16 @@ export default async function MailAccountsPage({
   const user = await requirePermissionOrRedirect("mailkonten.verwalten");
   const flags = await searchParams;
 
-  // Zwei Tabellen auf einer Seite, also zwei eigene Seitenzahlen.
-  const accountPage = Math.max(1, Number(flags.konten ?? 1) || 1);
-  const providerPage = Math.max(1, Number(flags.provider ?? 1) || 1);
+  // Zwei Tabellen auf einer Seite, also zwei eigene Seitenzahlen — und zwei
+  // eigene Seitengrößen.
+  const konten = await readPaging(flags, {
+    pageParam: "konten",
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
+  const providerSeite = await readPaging(flags, {
+    pageParam: "provider",
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
 
   const [accountTotal, accounts, providerTotal, providers, providerChoices] =
     await Promise.all([
@@ -44,15 +53,15 @@ export default async function MailAccountsPage({
       db.mailAccount.findMany({
         orderBy: [{ isDefault: "desc" }, { label: "asc" }],
         include: { provider: true, _count: { select: { campaigns: true } } },
-        skip: (accountPage - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
+        skip: konten.skip,
+        take: konten.take,
       }),
       db.provider.count(),
       db.provider.findMany({
         orderBy: { name: "asc" },
         include: { _count: { select: { accounts: true } } },
-        skip: (providerPage - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
+        skip: providerSeite.skip,
+        take: providerSeite.take,
       }),
       // Die Auswahl im Kontoformular braucht alle Provider, nicht nur die
       // gerade angezeigte Seite.
@@ -189,8 +198,8 @@ export default async function MailAccountsPage({
         )}
 
         <Pagination
-          page={accountPage}
-          pageSize={PAGE_SIZE}
+          page={konten.page}
+          pageSize={konten.pageSize}
           total={accountTotal}
           params={flags}
           paramName="konten"
@@ -257,8 +266,8 @@ export default async function MailAccountsPage({
         )}
 
         <Pagination
-          page={providerPage}
-          pageSize={PAGE_SIZE}
+          page={providerSeite.page}
+          pageSize={providerSeite.pageSize}
           total={providerTotal}
           params={flags}
           paramName="provider"

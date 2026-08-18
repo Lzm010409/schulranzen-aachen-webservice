@@ -8,6 +8,7 @@ import {
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { Pagination } from "@/components/pagination";
+import { readPaging } from "@/lib/pagination";
 import { TemplateEditor } from "../template-editor";
 import {
   deleteTemplateAction,
@@ -17,7 +18,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 10;
+/** Vorgabe, solange nichts anderes gewählt wurde. */
+const STANDARD_SEITENGROESSE = 10;
 
 export default async function TemplateDetailPage({
   params,
@@ -30,7 +32,10 @@ export default async function TemplateDetailPage({
   const { id } = await params;
   const flags = await searchParams;
 
-  const versionPage = Math.max(1, Number(flags.fassung ?? 1) || 1);
+  const fassungen = await readPaging(flags, {
+    pageParam: "fassung",
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
 
   const template = await db.mailTemplate.findUnique({ where: { id } });
   if (!template || template.deletedAt) notFound();
@@ -40,8 +45,8 @@ export default async function TemplateDetailPage({
     db.mailTemplateVersion.findMany({
       where: { templateId: id },
       orderBy: { version: "desc" },
-      skip: (versionPage - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip: fassungen.skip,
+      take: fassungen.take,
     }),
   ]);
 
@@ -117,8 +122,8 @@ export default async function TemplateDetailPage({
             </ul>
 
             <Pagination
-              page={versionPage}
-              pageSize={PAGE_SIZE}
+              page={fassungen.page}
+              pageSize={fassungen.pageSize}
               total={versionTotal}
               params={flags}
               paramName="fassung"

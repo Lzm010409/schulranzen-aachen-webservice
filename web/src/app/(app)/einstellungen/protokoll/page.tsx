@@ -10,11 +10,13 @@ import {
   formatDateTime,
 } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
+import { readPaging } from "@/lib/pagination";
 
 export const metadata = { title: "Protokoll" };
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 50;
+/** Vorgabe, solange nichts anderes gewählt wurde. */
+const STANDARD_SEITENGROESSE = 50;
 
 const ACTION_LABEL: Record<string, string> = {
   CREATE: "Angelegt",
@@ -45,7 +47,9 @@ export default async function AuditPage({
     );
   }
 
-  const page = Math.max(1, Number(params.seite ?? 1) || 1);
+  const { page, pageSize, skip, take } = await readPaging(params, {
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
   const entity = typeof params.entity === "string" ? params.entity : "";
   const where = entity ? { entity } : {};
 
@@ -54,8 +58,8 @@ export default async function AuditPage({
     db.auditLog.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip,
+      take,
       include: { user: { select: { name: true, email: true } } },
     }),
   ]);
@@ -136,7 +140,7 @@ export default async function AuditPage({
 
       <Pagination
         page={page}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         total={total}
         params={params}
       />

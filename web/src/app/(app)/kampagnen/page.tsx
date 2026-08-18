@@ -12,6 +12,7 @@ import {
   formatDateTime,
 } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
+import { readPaging } from "@/lib/pagination";
 
 export const metadata = { title: "Mailversand" };
 export const dynamic = "force-dynamic";
@@ -27,7 +28,8 @@ const STATUS: Record<
   CANCELLED: { label: "Abgebrochen", tone: "red" },
 };
 
-const PAGE_SIZE = 25;
+/** Vorgabe, solange nichts anderes gewählt wurde. */
+const STANDARD_SEITENGROESSE = 25;
 
 export default async function CampaignsPage({
   searchParams,
@@ -36,14 +38,16 @@ export default async function CampaignsPage({
 }) {
   await requirePermissionOrRedirect("kampagnen.ansehen");
   const params = await searchParams;
-  const page = Math.max(1, Number(params.seite ?? 1) || 1);
+  const { page, pageSize, skip, take } = await readPaging(params, {
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
 
   const [total, campaigns] = await Promise.all([
     db.campaign.count(),
     db.campaign.findMany({
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip,
+      take,
       include: {
         createdBy: { select: { name: true } },
         account: { select: { fromEmail: true } },
@@ -159,7 +163,7 @@ export default async function CampaignsPage({
 
       <Pagination
         page={page}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         total={total}
         params={params}
       />

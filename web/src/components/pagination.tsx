@@ -1,4 +1,5 @@
 import { cx } from "./ui";
+import { PageSizeSelect } from "./page-size-select";
 
 /**
  * Seitenweises Blaettern unter einer Tabelle.
@@ -8,7 +9,8 @@ import { cx } from "./ui";
  * fuer sich, ohne die anderen zurueckzusetzen.
  *
  * Passt alles auf eine Seite, bleiben die Knoepfe weg — die Zeile mit der
- * Anzahl bleibt trotzdem stehen, damit erkennbar ist, dass nichts fehlt.
+ * Anzahl und die Auswahl der Seitengroesse bleiben trotzdem stehen, damit
+ * erkennbar ist, dass nichts fehlt und sich die Groesse aendern laesst.
  */
 export function Pagination({
   page,
@@ -66,10 +68,13 @@ export function Pagination({
 
   return (
     <nav className="mt-4 flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm text-slate-600">
-        {first.toLocaleString("de-DE")}–{last.toLocaleString("de-DE")} von{" "}
-        {total.toLocaleString("de-DE")}
-      </p>
+      <div className="pagination-info">
+        <p className="text-sm text-slate-600">
+          {first.toLocaleString("de-DE")}–{last.toLocaleString("de-DE")} von{" "}
+          {total.toLocaleString("de-DE")}
+        </p>
+        <PageSizeSelect pageSize={pageSize} pageParam={paramName} />
+      </div>
       {pages <= 1 ? null : (
       <div className="flex flex-wrap items-center gap-1">
         <a

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { Pagination } from "@/components/pagination";
+import { readPaging } from "@/lib/pagination";
 import { deleteProductAction } from "./actions";
 import { ProductEditor } from "./product-editor";
 import { MergeForm } from "./merge-form";
@@ -20,7 +21,8 @@ import { CategoryFilter } from "./category-filter";
 export const metadata = { title: "Produkte" };
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 50;
+/** Vorgabe, solange nichts anderes gewählt wurde. */
+const STANDARD_SEITENGROESSE = 50;
 
 export default async function ProductsPage({
   searchParams,
@@ -30,7 +32,9 @@ export default async function ProductsPage({
   const user = await requirePermissionOrRedirect("produkte.ansehen");
   const mayManage = can(user, "produkte.verwalten");
   const params = await searchParams;
-  const page = Math.max(1, Number(params.seite ?? 1) || 1);
+  const { page, pageSize, skip, take } = await readPaging(params, {
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
 
   // Nach Warengruppe filtern — die häufigste Frage am Katalog.
   const categoryId = typeof params.gruppe === "string" ? params.gruppe : "";
@@ -45,8 +49,8 @@ export default async function ProductsPage({
         _count: { select: { purchases: true } },
         category: { select: { id: true, name: true } },
       },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip,
+      take,
     }),
     // Zum Zusammenführen braucht die Auswahl alle Produkte, nicht nur die
     // Seite — sonst liesse sich nur innerhalb einer Seite zusammenfassen.
@@ -169,7 +173,7 @@ export default async function ProductsPage({
 
           <Pagination
             page={page}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             total={total}
             params={params}
           />

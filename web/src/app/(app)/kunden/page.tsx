@@ -22,11 +22,13 @@ import {
 import { CustomerFilterBar } from "./filter-bar";
 import { SelectionToolbar } from "./selection-toolbar";
 import { Pagination } from "@/components/pagination";
+import { readPaging } from "@/lib/pagination";
 
 export const metadata = { title: "Kunden" };
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 50;
+/** Vorgabe, solange nichts anderes gewählt wurde. */
+const STANDARD_SEITENGROESSE = 50;
 
 type SortKey = "name" | "zip" | "city" | "purchase";
 
@@ -39,7 +41,9 @@ export default async function CustomersPage({
   const params = await searchParams;
 
   const filter = parseFilter(params);
-  const page = Math.max(1, Number(params.seite ?? 1) || 1);
+  const { page, pageSize, skip, take } = await readPaging(params, {
+    fallbackSize: STANDARD_SEITENGROESSE,
+  });
   const sort = (String(params.sort ?? "name") as SortKey) ?? "name";
   const dir = params.dir === "desc" ? "desc" : "asc";
 
@@ -61,8 +65,8 @@ export default async function CustomersPage({
       where,
       select: customerListSelect,
       orderBy,
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      skip,
+      take,
     }),
     db.product.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     db.productCategory.findMany({
@@ -238,7 +242,7 @@ export default async function CustomersPage({
 
       <Pagination
         page={page}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         total={total}
         params={params}
       />
