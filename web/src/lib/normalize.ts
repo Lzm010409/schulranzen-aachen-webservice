@@ -85,3 +85,23 @@ export function customerIdentityKey(input: {
     normalizeZip(input.zip),
   ].join("|");
 }
+
+/**
+ * Liest eine Anrede aus freiem Text — aus einer Importdatei oder einem
+ * Formular. Was sich nicht sicher zuordnen laesst, bleibt unbekannt; eine
+ * falsche Anrede faellt beim Empfaenger sofort auf.
+ */
+export function parseSalutation(
+  input: string | null | undefined,
+): "FRAU" | "HERR" | "UNBEKANNT" {
+  const text = (input ?? "").trim().toLowerCase().replace(/\.$/, "");
+  if (!text) return "UNBEKANNT";
+
+  if (["frau", "fr", "ms", "mrs", "miss", "w", "weiblich", "f"].includes(text)) {
+    return "FRAU";
+  }
+  if (["herr", "hr", "hrn", "mr", "m", "maennlich", "männlich"].includes(text)) {
+    return "HERR";
+  }
+  return "UNBEKANNT";
+}

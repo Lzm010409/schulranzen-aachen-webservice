@@ -41,9 +41,15 @@ export function CampaignForm({
   recipients,
   accounts,
   templates,
+  beispiel,
+  beispielName,
 }: {
   source: "auswahl" | "filter";
   ids: string[];
+  /** Platzhalterwerte eines echten Empfängers für die Vorschau. */
+  beispiel: Record<string, string>;
+  /** Wessen Daten das sind; leer, wenn die Auswahl niemanden enthält. */
+  beispielName: string;
   filter: CustomerFilter;
   filterDescription: string;
   recipients: {
@@ -75,16 +81,7 @@ export function CampaignForm({
   ].filter(Boolean) as string[];
 
   const previewHtml = useMemo(() => {
-    const sample: Record<string, string> = {
-      vorname: "Anna",
-      nachname: "Beispiel",
-      anrede: "Hallo Anna Beispiel",
-      stadt: "Aachen",
-      plz: "52062",
-      produkt: "Ergobag Cubo",
-      kaufdatum: "14.08.2024",
-      abmeldelink: "#",
-    };
+    const sample: Record<string, string> = { ...beispiel, abmeldelink: "#" };
     const fill = (input: string) =>
       input.replace(
         /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
@@ -102,7 +99,7 @@ export function CampaignForm({
     return layout.includes("{{content}}")
       ? layout.replace(/\{\{\s*content\s*\}\}/gi, content)
       : `${layout}<div style="padding:24px">${content}</div>`;
-  }, [body, template]);
+  }, [body, template, beispiel]);
 
   return (
     <ActionForm action={formAction} className="space-y-6">
@@ -283,7 +280,14 @@ export function CampaignForm({
         </div>
       </Card>
 
-      <Card title="Vorschau" description="Mit Beispieldaten gefüllt.">
+      <Card
+        title="Vorschau"
+        description={
+          beispielName
+            ? `Gefüllt mit den Daten von ${beispielName} — einem echten Empfänger dieser Auswahl.`
+            : "Mit erfundenen Daten gefüllt — die Auswahl enthält noch keinen Kunden."
+        }
+      >
         <div className="flex justify-center overflow-x-auto bg-slate-100 p-4">
           <iframe
             title="Vorschau"

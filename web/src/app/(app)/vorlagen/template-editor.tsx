@@ -28,9 +28,15 @@ const KNOWN = new Set<string>(PLACEHOLDERS.map((p) => p.key));
 export function TemplateEditor({
   values,
   cancelHref,
+  beispiel,
+  beispielName,
 }: {
   values: TemplateValues;
   cancelHref: string;
+  /** Platzhalterwerte eines echten Kunden für die Vorschau. */
+  beispiel: Record<string, string>;
+  /** Wessen Daten das sind; leer, wenn es noch keinen Kunden gibt. */
+  beispielName: string;
 }) {
   const [state, formAction, isPending] = useActionState<
     TemplateFormState,
@@ -54,13 +60,7 @@ export function TemplateEditor({
 
   const previewHtml = useMemo(() => {
     const sample: Record<string, string> = {
-      vorname: "Anna",
-      nachname: "Beispiel",
-      anrede: "Hallo Anna Beispiel",
-      stadt: "Aachen",
-      plz: "52062",
-      produkt: "Ergobag Cubo",
-      kaufdatum: "14.08.2024",
+      ...beispiel,
       abmeldelink: "#",
       content:
         "<p>Hier steht später der Text der Kampagne.</p><p>Er wird an dieser Stelle eingesetzt.</p>",
@@ -74,7 +74,7 @@ export function TemplateEditor({
       : `<pre style="white-space:pre-wrap;font-family:inherit">${filled
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")}</pre>`;
-  }, [body, isHtml]);
+  }, [body, isHtml, beispiel]);
 
   return (
     <ActionForm action={formAction} className="space-y-6">
@@ -207,7 +207,11 @@ export function TemplateEditor({
 
       <Card
         title="Vorschau"
-        description="Mit Beispieldaten gefüllt."
+        description={
+          beispielName
+            ? `Gefüllt mit den Daten von ${beispielName}.`
+            : "Mit erfundenen Daten gefüllt — es gibt noch keinen Kunden."
+        }
         footer={
           <div className="flex gap-2">
             {(["aus", "desktop", "mobil"] as const).map((mode) => (

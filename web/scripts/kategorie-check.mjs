@@ -55,8 +55,12 @@ try {
   await page.waitForSelector("text=es wurde noch nichts geschrieben", { timeout: 60000 });
 
   check("Die Spalte „Warengruppe“ wird erkannt",
-    (await page.inputValue("#spalte_category")) === "8",
+    (await page.inputValue("#spalte_category")) === "9",
     `Spalte ${await page.inputValue("#spalte_category")}`);
+
+  check("Die Spalte „Anrede“ wird erkannt",
+    (await page.inputValue("#spalte_salutation")) === "0",
+    `Spalte ${await page.inputValue("#spalte_salutation")}`);
 
   await page.setInputFiles("#datei", join(DIR, "kunden-standard.csv"));
   await page.click('button:has-text("Import ausführen")');
@@ -77,6 +81,20 @@ try {
     sql(`select season from purchase where "purchasedAt"='2021-09-03'`));
   check("Jeder Kauf mit Datum hat eine Saison",
     sql(`select count(*) from purchase where "purchasedAt" is not null and season is null`) === "0");
+
+  // Anrede aus der Datei
+  check("Die Anrede wird übernommen",
+    sql(`select salutation from customer where "lastName"='Berger'`) === "FRAU",
+    sql(`select salutation from customer where "lastName"='Berger'`));
+  check("Auch die männliche Anrede",
+    sql(`select salutation from customer where "lastName"='Claßen'`) === "HERR");
+  // Die Standarddatei nennt für jede Person eine Anrede — beide Formen müssen
+  // ankommen. Der Fall „nicht deutbar“ steckt in den Problemfällen und wird
+  // dort geprüft.
+  check("Beide Anreden kommen an",
+    sql(`select count(*) from customer where salutation='FRAU'`) === "6" &&
+    sql(`select count(*) from customer where salutation='HERR'`) === "4",
+    sql(`select salutation::text || ': ' || count(*)::text from customer group by salutation order by 1`).replace(/\n/g, ", "));
 
   // ------------------------------------------------------- Filter im UI
   await page.goto(`${B}/kunden`);

@@ -8,6 +8,7 @@ import {
   normalizeName,
   normalizePhone,
   normalizeZip,
+  parseSalutation,
   productSlug,
 } from "../normalize";
 import {
@@ -44,6 +45,7 @@ export type RowIssue = {
 
 export type PreparedRow = {
   row: number;
+  salutation: "FRAU" | "HERR" | "UNBEKANNT";
   firstName: string;
   lastName: string;
   street: string;
@@ -220,6 +222,7 @@ export async function prepareImport(
 
     rows.push({
       row: rowNumber,
+      salutation: parseSalutation(cell(raw, mapping.salutation)),
       firstName: firstName || "—",
       lastName: lastName || "—",
       street: normalizeName(cell(raw, mapping.street)) || "—",
@@ -403,6 +406,7 @@ type CustomerWrite = {
   group: PreparedRow[];
   existingId: string | null;
   data: {
+    salutation: "FRAU" | "HERR" | "UNBEKANNT";
     firstName: string;
     lastName: string;
     street: string;
@@ -424,6 +428,10 @@ function mergeGroup(group: PreparedRow[]): CustomerWrite {
     group,
     existingId: group.find((row) => row.matchesCustomerId)?.matchesCustomerId ?? null,
     data: {
+      // Eine bekannte Anrede sticht „unbekannt", egal in welcher Zeile sie steht.
+      salutation:
+        group.find((r) => r.salutation !== "UNBEKANNT")?.salutation ??
+        "UNBEKANNT",
       firstName: first.firstName,
       lastName: first.lastName,
       street: group.find((r) => r.street !== "—")?.street ?? first.street,
@@ -555,6 +563,10 @@ async function writeBatch(
           await tx.customer.update({
             where: { id: entry.existingId },
             data: {
+              salutation:
+                entry.data.salutation !== "UNBEKANNT"
+                  ? entry.data.salutation
+                  : current.salutation,
               firstName: entry.data.firstName,
               lastName: entry.data.lastName,
               street: entry.data.street !== "—" ? entry.data.street : current.street,

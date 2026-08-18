@@ -7,11 +7,17 @@ import sanitizeHtml from "sanitize-html";
 export const PLACEHOLDERS = [
   { key: "vorname", label: "Vorname des Kunden" },
   { key: "nachname", label: "Nachname des Kunden" },
-  { key: "anrede", label: 'Anrede, z. B. "Hallo Anna Beispiel"' },
+  {
+    key: "anrede",
+    label: 'Foermliche Anrede, z. B. "Sehr geehrte Frau Mueller"',
+  },
+  { key: "anrede_kurz", label: 'Lockere Anrede, z. B. "Hallo Anna"' },
   { key: "stadt", label: "Wohnort" },
   { key: "plz", label: "Postleitzahl" },
   { key: "produkt", label: "Zuletzt gekauftes Produkt" },
+  { key: "warengruppe", label: "Warengruppe des letzten Kaufs" },
   { key: "kaufdatum", label: "Datum des letzten Kaufs" },
+  { key: "saison", label: "Einschulungsjahrgang des letzten Kaufs" },
   { key: "abmeldelink", label: "Persoenlicher Abmeldelink (Pflicht)" },
   { key: "content", label: "Nur in Vorlagen: Platz fuer den Kampagnentext" },
 ] as const;
@@ -147,7 +153,16 @@ export function renderEmail(input: {
   vars: TemplateVars;
   unsubscribeUrl?: string;
 }): { html: string; text: string } {
+  // Jeder bekannte Platzhalter bekommt einen Wert, auch wenn die Quelle ihn
+  // nicht liefert. Sonst stuende beim Empfaenger woertlich „{{vorname}}" in
+  // der Mail — genau das passierte, wenn ein Kunde zwischen Einreihen und
+  // Versand geloescht wurde.
+  const leer = Object.fromEntries(
+    PLACEHOLDERS.filter((p) => p.key !== "content").map((p) => [p.key, ""]),
+  ) as TemplateVars;
+
   const vars: TemplateVars = {
+    ...leer,
     ...input.vars,
     abmeldelink: input.unsubscribeUrl ?? input.vars.abmeldelink ?? "",
   };
@@ -188,8 +203,37 @@ Sie moechten keine weiteren E-Mails erhalten?
   return { html, text: htmlToText(html) };
 }
 
-/** Anrede aus Vor-/Nachname; leer bleibende Teile werden ausgelassen. */
-export function buildSalutation(firstName: string, lastName: string): string {
+/**
+ * Foermliche Anrede.
+ *
+ * Mit bekanntem Geschlecht die richtige Form mit Nachnamen; ohne bleibt es bei
+ * „Guten Tag" plus Name. Geraten wird nichts — aus einem Vornamen auf das
+ * Geschlecht zu schliessen geht bei Kim, Andrea oder Toni zuverlaessig schief,
+ * und eine falsche Anrede faellt beim Empfaenger sofort auf.
+ */
+export function buildSalutation(
+  firstName: string,
+  lastName: string,
+  salutation: "FRAU" | "HERR" | "UNBEKANNT" = "UNBEKANNT",
+): string {
+  const nachname = lastName.trim();
+
+  if (salutation === "FRAU" && nachname) return `Sehr geehrte Frau ${nachname}`;
+  if (salutation === "HERR" && nachname) return `Sehr geehrter Herr ${nachname}`;
+
   const name = [firstName, lastName].filter(Boolean).join(" ").trim();
-  return name.length > 0 ? `Hallo ${name}` : "Hallo";
+  return name.length > 0 ? `Guten Tag ${name}` : "Guten Tag";
 }
+
+/** Lockere Anrede fuer eine persoenlichere Ansprache. */
+export function buildShortSalutation(firstName: string): string {
+  const vorname = firstName.trim();
+  return vorname.length > 0 ? `Hallo ${vorname}` : "Hallo";
+}
+
+/** Beschriftung der Anrede fuer die Oberflaeche. */
+export const SALUTATION_LABEL: Record<string, string> = {
+  FRAU: "Frau",
+  HERR: "Herr",
+  UNBEKANNT: "keine Angabe",
+};

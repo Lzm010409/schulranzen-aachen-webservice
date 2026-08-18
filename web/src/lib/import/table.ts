@@ -103,6 +103,12 @@ export function parseCsv(input: string, delimiter?: string): Table {
  */
 export const IMPORT_FIELDS = [
   {
+    key: "salutation",
+    label: "Anrede",
+    required: false,
+    aliases: ["anrede", "salutation", "geschlecht", "titel", "ansprache"],
+  },
+  {
     key: "firstName",
     label: "Vorname",
     required: true,

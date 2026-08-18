@@ -35,6 +35,8 @@ Deckt die Fälle ab, an denen ein Import sonst stolpert:
 | 6 | komplett leere Zeile | wird still übersprungen |
 | 7 | keine Namen | wird ausgelassen und im Bericht genannt |
 | 8 | unbekanntes Produkt | wird neu angelegt |
+| 2 | Anrede `Hr.` | wird als „Herr“ gelesen |
+| 5 | Anrede `Firma` | lässt sich nicht zuordnen — bleibt ohne Angabe, statt zu raten |
 
 Außerdem: **Komma** statt Semikolon, **kein BOM**, **englische Überschriften**
 und eine Spalte `E-Mail-Adresse` direkt neben `Adresse` — die Spaltenerkennung

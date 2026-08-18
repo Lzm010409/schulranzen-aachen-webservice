@@ -30,6 +30,10 @@ const optionalText = (max = 500) =>
     .catch(null);
 
 export const customerSchema = z.object({
+  salutation: z
+    .enum(["FRAU", "HERR", "UNBEKANNT"])
+    .optional()
+    .default("UNBEKANNT"),
   firstName: requiredText("Vorname", 100),
   lastName: requiredText("Nachname", 100),
   street: requiredText("Adresse", 200),

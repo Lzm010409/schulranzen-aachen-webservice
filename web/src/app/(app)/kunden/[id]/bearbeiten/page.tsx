@@ -44,6 +44,7 @@ export default async function EditCustomerPage({
         products={products.map((p) => p.name)}
         values={{
           id: customer.id,
+          salutation: customer.salutation,
           firstName: customer.firstName,
           lastName: customer.lastName,
           street: customer.street,

@@ -31,6 +31,7 @@ const PRODUKTE = [
 ];
 
 type Person = {
+  anrede?: "FRAU" | "HERR";
   vorname: string;
   nachname: string;
   strasse: string;
@@ -46,7 +47,7 @@ type Person = {
 
 const PERSONEN: Person[] = [
   {
-    vorname: "Anna", nachname: "Berger", strasse: "Pontstraße 14",
+    anrede: "FRAU", vorname: "Anna", nachname: "Berger", strasse: "Pontstraße 14",
     plz: "52062", stadt: "Aachen", mail: "anna.berger@example.de",
     tel: "0241 4011234",
     kaeufe: [
@@ -55,13 +56,13 @@ const PERSONEN: Person[] = [
     ],
   },
   {
-    vorname: "Bernd", nachname: "Claßen", strasse: "Markt 8",
+    anrede: "HERR", vorname: "Bernd", nachname: "Claßen", strasse: "Markt 8",
     plz: "52062", stadt: "Aachen", mail: "b.classen@example.de",
     tel: "+49 241 4022345",
     kaeufe: [{ produkt: "Satch Pack", datum: "2024-08-05" }],
   },
   {
-    vorname: "Christina", nachname: "Dahmen", strasse: "Adalbertsteinweg 92",
+    anrede: "FRAU", vorname: "Christina", nachname: "Dahmen", strasse: "Adalbertsteinweg 92",
     plz: "52070", stadt: "Aachen", mail: "c.dahmen@example.de", tel: null,
     kaeufe: [
       { produkt: "Scout Sunny", datum: "2022-08-11" },
@@ -70,13 +71,13 @@ const PERSONEN: Person[] = [
     ],
   },
   {
-    vorname: "Dennis", nachname: "Esser", strasse: "Vaalser Straße 5",
+    anrede: "HERR", vorname: "Dennis", nachname: "Esser", strasse: "Vaalser Straße 5",
     plz: "52074", stadt: "Aachen", mail: null, tel: "0241 4033456",
     kaeufe: [{ produkt: "Step by Step Space", datum: "2024-07-22" }],
     notiz: "Möchte ausdrücklich nur telefonisch kontaktiert werden.",
   },
   {
-    vorname: "Elena", nachname: "Franzen", strasse: "Jülicher Straße 41",
+    anrede: "FRAU", vorname: "Elena", nachname: "Franzen", strasse: "Jülicher Straße 41",
     plz: "52070", stadt: "Aachen", mail: "e.franzen@example.de",
     tel: "0241 4044567",
     kaeufe: [{ produkt: "Satch Pack", datum: "2025-08-14" }],
@@ -90,7 +91,7 @@ const PERSONEN: Person[] = [
     bounce: true,
   },
   {
-    vorname: "Greta", nachname: "Hansen", strasse: "Hauptstraße 27",
+    anrede: "FRAU", vorname: "Greta", nachname: "Hansen", strasse: "Hauptstraße 27",
     plz: "52134", stadt: "Herzogenrath", mail: "g.hansen@example.de",
     tel: "02406 991234",
     kaeufe: [
@@ -99,19 +100,19 @@ const PERSONEN: Person[] = [
     ],
   },
   {
-    vorname: "Hendrik", nachname: "Ibrahim", strasse: "Kirchstraße 12",
+    anrede: "HERR", vorname: "Hendrik", nachname: "Ibrahim", strasse: "Kirchstraße 12",
     plz: "52249", stadt: "Eschweiler", mail: "h.ibrahim@example.de",
     tel: "02403 771234",
     kaeufe: [{ produkt: "Step by Step Space", datum: "2025-08-08" }],
   },
   {
-    vorname: "Ines", nachname: "Jansen", strasse: "Roermonder Straße 60",
+    anrede: "FRAU", vorname: "Ines", nachname: "Jansen", strasse: "Roermonder Straße 60",
     plz: "52072", stadt: "Aachen", mail: "i.jansen@example.de",
     tel: "0241 4066789",
     kaeufe: [{ produkt: "Sporttasche Größe M", datum: "2021-09-03" }],
   },
   {
-    vorname: "Jonas", nachname: "Königs", strasse: "Alsdorfer Straße 9",
+    anrede: "HERR", vorname: "Jonas", nachname: "Königs", strasse: "Alsdorfer Straße 9",
     plz: "52477", stadt: "Alsdorf", mail: "j.koenigs@example.de", tel: null,
     kaeufe: [],
     notiz: "Interessent, noch kein Kauf.",
@@ -205,6 +206,7 @@ async function anlegen() {
   for (const person of PERSONEN) {
     const notiz = [person.notiz, MARKER].filter(Boolean).join(" ");
 
+    const anrede: "FRAU" | "HERR" | "UNBEKANNT" = person.anrede ?? "UNBEKANNT";
     const vorhanden = person.mail
       ? await db.customer.findFirst({ where: { email: person.mail } })
       : await db.customer.findFirst({
@@ -216,6 +218,7 @@ async function anlegen() {
         });
 
     const daten = {
+      salutation: anrede,
       firstName: person.vorname,
       lastName: person.nachname,
       street: person.strasse,

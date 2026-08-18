@@ -19,6 +19,7 @@ const BOM = "﻿";
 // --------------------------------------------------------------- 1. Standard
 
 const STANDARD_HEADER = [
+  "Anrede",
   "Vorname",
   "Nachname",
   "Adresse",
@@ -32,18 +33,18 @@ const STANDARD_HEADER = [
 ];
 
 const STANDARD_ROWS = [
-  ["Anna", "Berger", "Pontstraße 14", "52062", "Aachen", "anna.berger@example.de", "0241 4011234", "Ergobag Cubo", "Schulranzen", "18.07.2023"],
-  ["Anna", "Berger", "Pontstraße 14", "52062", "Aachen", "anna.berger@example.de", "0241 4011234", "Sporttasche Größe M", "Zubehör", "02.08.2025"],
-  ["Bernd", "Claßen", "Markt 8", "52062", "Aachen", "b.classen@example.de", "+49 241 4022345", "Satch Pack", "Schulranzen", "05.08.2024"],
-  ["Christina", "Dahmen", "Adalbertsteinweg 92", "52070", "Aachen", "c.dahmen@example.de", "", "Scout Sunny", "Schulranzen", "11.08.2022"],
-  ["Christina", "Dahmen", "Adalbertsteinweg 92", "52070", "Aachen", "c.dahmen@example.de", "", "Federmäppchen Set", "Zubehör", "11.08.2022"],
-  ["Dennis", "Esser", "Vaalser Straße 5", "52074", "Aachen", "d.esser@example.de", "0241 4033456", "Step by Step Space", "Schulranzen", "22.07.2024"],
-  ["Elena", "Franzen", "Jülicher Straße 41", "52070", "Aachen", "e.franzen@example.de", "0241 4044567", "Satch Pack", "Schulranzen", "14.08.2025"],
-  ["Greta", "Hansen", "Hauptstraße 27", "52134", "Herzogenrath", "g.hansen@example.de", "02406 991234", "Ergobag Cubo", "Schulranzen", "01.08.2024"],
-  ["Hendrik", "Ibrahim", "Kirchstraße 12", "52249", "Eschweiler", "h.ibrahim@example.de", "02403 771234", "Step by Step Space", "Schulranzen", "08.08.2025"],
-  ["Ines", "Jansen", "Roermonder Straße 60", "52072", "Aachen", "i.jansen@example.de", "0241 4066789", "Sporttasche Größe M", "Zubehör", "03.09.2021"],
-  ["Jonas", "Königs", "Alsdorfer Straße 9", "52477", "Alsdorf", "j.koenigs@example.de", "", "", "", ""],
-  ["Katrin", "Lemmens", "Trierer Straße 118", "52078", "Aachen", "k.lemmens@example.de", "0241 4077890", "Scout Sunny", "Schulranzen", "19.08.2023"],
+  ["Frau", "Anna", "Berger", "Pontstraße 14", "52062", "Aachen", "anna.berger@example.de", "0241 4011234", "Ergobag Cubo", "Schulranzen", "18.07.2023"],
+  ["Frau", "Anna", "Berger", "Pontstraße 14", "52062", "Aachen", "anna.berger@example.de", "0241 4011234", "Sporttasche Größe M", "Zubehör", "02.08.2025"],
+  ["Herr", "Bernd", "Claßen", "Markt 8", "52062", "Aachen", "b.classen@example.de", "+49 241 4022345", "Satch Pack", "Schulranzen", "05.08.2024"],
+  ["Frau", "Christina", "Dahmen", "Adalbertsteinweg 92", "52070", "Aachen", "c.dahmen@example.de", "", "Scout Sunny", "Schulranzen", "11.08.2022"],
+  ["Frau", "Christina", "Dahmen", "Adalbertsteinweg 92", "52070", "Aachen", "c.dahmen@example.de", "", "Federmäppchen Set", "Zubehör", "11.08.2022"],
+  ["Herr", "Dennis", "Esser", "Vaalser Straße 5", "52074", "Aachen", "d.esser@example.de", "0241 4033456", "Step by Step Space", "Schulranzen", "22.07.2024"],
+  ["Frau", "Elena", "Franzen", "Jülicher Straße 41", "52070", "Aachen", "e.franzen@example.de", "0241 4044567", "Satch Pack", "Schulranzen", "14.08.2025"],
+  ["Frau", "Greta", "Hansen", "Hauptstraße 27", "52134", "Herzogenrath", "g.hansen@example.de", "02406 991234", "Ergobag Cubo", "Schulranzen", "01.08.2024"],
+  ["Herr", "Hendrik", "Ibrahim", "Kirchstraße 12", "52249", "Eschweiler", "h.ibrahim@example.de", "02403 771234", "Step by Step Space", "Schulranzen", "08.08.2025"],
+  ["Frau", "Ines", "Jansen", "Roermonder Straße 60", "52072", "Aachen", "i.jansen@example.de", "0241 4066789", "Sporttasche Größe M", "Zubehör", "03.09.2021"],
+  ["Herr", "Jonas", "Königs", "Alsdorfer Straße 9", "52477", "Alsdorf", "j.koenigs@example.de", "", "", "", ""],
+  ["Frau", "Katrin", "Lemmens", "Trierer Straße 118", "52078", "Aachen", "k.lemmens@example.de", "0241 4077890", "Scout Sunny", "Schulranzen", "19.08.2023"],
 ];
 
 function csvCell(value: string, separator: string): string {
@@ -83,6 +84,7 @@ writeFileSync(
  *   - dieselbe Person zweimal, einmal mit und einmal ohne Mailadresse
  */
 const SCHWIERIG_HEADER = [
+  "Salutation",
   "First Name",
   "Last Name",
   "Adresse",
@@ -96,13 +98,13 @@ const SCHWIERIG_HEADER = [
 ];
 
 const SCHWIERIG_ROWS = [
-  ["  Lars ", " Meurer ", "Bergstraße 3, 2. OG", "D-52064", "Aachen", "  LARS.MEURER@Example.DE  ", "0241/40 88 901", "Ergobag Cubo", "2024-08-14", "Stammkunde"],
-  ["Lars", "Meurer", "Bergstraße 3, 2. OG", "52064", "Aachen", "", "0241 4088901", "Federmäppchen Set", "45518", ""],
-  ["Miriam", "Nowak", "Am Hang 12", "52074", "Aachen", "miriam(at)example.de", "+49 241 4099012", "Satch Pack", "01/09/2023", "Mailadresse unklar"],
-  ["Norbert", "Oberst", '"Zum Hof" 7', "52070", "Aachen", "n.oberst@example.de", "0049 241 4010123", "Scout Sunny", "demnächst", ""],
-  ["", "", "", "", "", "", "", "", "", ""],
-  ["", "", "Unbekannt 1", "52062", "Aachen", "", "", "Ergobag Cubo", "01.01.2024", "Zeile ohne Namen"],
-  ["Petra", "Quirin", "Talstr. 8", "52078", "Aachen", "p.quirin@example.de", "0241 4021234", "Neuprodukt Wanderrucksack", "12.08.2025", "neues Produkt"],
+  ["Hr.", "  Lars ", " Meurer ", "Bergstraße 3, 2. OG", "D-52064", "Aachen", "  LARS.MEURER@Example.DE  ", "0241/40 88 901", "Ergobag Cubo", "2024-08-14", "Stammkunde"],
+  ["", "Lars", "Meurer", "Bergstraße 3, 2. OG", "52064", "Aachen", "", "0241 4088901", "Federmäppchen Set", "45518", ""],
+  ["Frau", "Miriam", "Nowak", "Am Hang 12", "52074", "Aachen", "miriam(at)example.de", "+49 241 4099012", "Satch Pack", "01/09/2023", "Mailadresse unklar"],
+  ["Firma", "Norbert", "Oberst", '"Zum Hof" 7', "52070", "Aachen", "n.oberst@example.de", "0049 241 4010123", "Scout Sunny", "demnächst", ""],
+  ["", "", "", "", "", "", "", "", "", "", ""],
+  ["", "", "", "Unbekannt 1", "52062", "Aachen", "", "", "Ergobag Cubo", "01.01.2024", "Zeile ohne Namen"],
+  ["Frau", "Petra", "Quirin", "Talstr. 8", "52078", "Aachen", "p.quirin@example.de", "0241 4021234", "Neuprodukt Wanderrucksack", "12.08.2025", "neues Produkt"],
 ];
 
 writeFileSync(
@@ -227,6 +229,8 @@ Deckt die Fälle ab, an denen ein Import sonst stolpert:
 | 6 | komplett leere Zeile | wird still übersprungen |
 | 7 | keine Namen | wird ausgelassen und im Bericht genannt |
 | 8 | unbekanntes Produkt | wird neu angelegt |
+| 2 | Anrede \`Hr.\` | wird als „Herr“ gelesen |
+| 5 | Anrede \`Firma\` | lässt sich nicht zuordnen — bleibt ohne Angabe, statt zu raten |
 
 Außerdem: **Komma** statt Semikolon, **kein BOM**, **englische Überschriften**
 und eine Spalte \`E-Mail-Adresse\` direkt neben \`Adresse\` — die Spaltenerkennung

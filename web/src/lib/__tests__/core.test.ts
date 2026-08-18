@@ -104,8 +104,18 @@ describe("Platzhalter", () => {
   });
 
   it("baut eine Anrede", () => {
-    expect(buildSalutation("Anna", "Beispiel")).toBe("Hallo Anna Beispiel");
-    expect(buildSalutation("", "")).toBe("Hallo");
+    // Ohne Angabe wird nicht geraten — neutrale Form mit Namen.
+    expect(buildSalutation("Anna", "Beispiel")).toBe("Guten Tag Anna Beispiel");
+    expect(buildSalutation("", "")).toBe("Guten Tag");
+    expect(buildSalutation("Anna", "Müller", "FRAU")).toBe(
+      "Sehr geehrte Frau Müller",
+    );
+    expect(buildSalutation("Bernd", "Schmitz", "HERR")).toBe(
+      "Sehr geehrter Herr Schmitz",
+    );
+    // Ohne Nachnamen greift auch mit Geschlecht die neutrale Form: „Sehr
+    // geehrte Frau" ohne Namen liest sich wie ein Fehler.
+    expect(buildSalutation("Anna", "", "FRAU")).toBe("Guten Tag Anna");
   });
 });
 

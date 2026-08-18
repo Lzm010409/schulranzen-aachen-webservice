@@ -20,6 +20,7 @@ export type CustomerFormState = {
 
 function readCustomer(formData: FormData) {
   return customerSchema.safeParse({
+    salutation: formData.get("salutation") ?? "UNBEKANNT",
     firstName: formData.get("firstName") ?? "",
     lastName: formData.get("lastName") ?? "",
     street: formData.get("street") ?? "",
@@ -130,6 +131,7 @@ export async function saveCustomerAction(
       diff: before
         ? diffOf(
             {
+              salutation: before.salutation,
               firstName: before.firstName,
               lastName: before.lastName,
               street: before.street,

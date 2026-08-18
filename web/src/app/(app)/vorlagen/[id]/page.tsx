@@ -9,6 +9,7 @@ import {
 import { SubmitButton } from "@/components/submit-button";
 import { Pagination } from "@/components/pagination";
 import { readPaging } from "@/lib/pagination";
+import { buildPreviewVars } from "@/lib/mail-vars";
 import { TemplateEditor } from "../template-editor";
 import {
   deleteTemplateAction,
@@ -29,6 +30,7 @@ export default async function TemplateDetailPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   await requirePermissionOrRedirect("vorlagen.verwalten");
+  const beispiel = await buildPreviewVars();
   const { id } = await params;
   const flags = await searchParams;
 
@@ -72,6 +74,8 @@ export default async function TemplateDetailPage({
       />
 
       <TemplateEditor
+        beispiel={beispiel.vars as Record<string, string>}
+        beispielName={beispiel.quelle}
         cancelHref="/vorlagen"
         values={{
           id: template.id,

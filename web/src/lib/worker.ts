@@ -10,7 +10,8 @@ import {
   unsubscribeUrlFor,
   type AccountWithProvider,
 } from "./mailer";
-import { buildSalutation, renderEmail, renderPlaceholders } from "./template";
+import { renderEmail, renderPlaceholders } from "./template";
+import { buildCustomerVars } from "./mail-vars";
 
 /**
  * Versand-Worker.
@@ -184,7 +185,7 @@ async function sendOne(input: {
   const { job, campaign, account, transport, attachments } = input;
 
   try {
-    const vars = await buildVars(job.customer_id, job.to_name);
+    const vars = await buildCustomerVars(job.customer_id, job.to_name);
     const unsubscribeUrl = job.customer_id
       ? await unsubscribeUrlFor(job.customer_id)
       : undefined;
@@ -262,39 +263,6 @@ async function sendOne(input: {
   }
 }
 
-async function buildVars(customerId: string | null, fallbackName: string) {
-  if (!customerId) {
-    return { anrede: `Hallo ${fallbackName}`.trim() };
-  }
-  const customer = await db.customer.findUnique({
-    where: { id: customerId },
-    select: {
-      firstName: true,
-      lastName: true,
-      city: true,
-      zip: true,
-      purchases: {
-        orderBy: [{ purchasedAt: "desc" }, { createdAt: "desc" }],
-        take: 1,
-        select: { purchasedAt: true, product: { select: { name: true } } },
-      },
-    },
-  });
-  if (!customer) return { anrede: `Hallo ${fallbackName}`.trim() };
-
-  const latest = customer.purchases[0];
-  return {
-    vorname: customer.firstName,
-    nachname: customer.lastName,
-    anrede: buildSalutation(customer.firstName, customer.lastName),
-    stadt: customer.city,
-    plz: customer.zip,
-    produkt: latest?.product.name ?? "",
-    kaufdatum: latest?.purchasedAt
-      ? latest.purchasedAt.toLocaleDateString("de-DE")
-      : "",
-  };
-}
 
 async function failJobs(jobs: ClaimedJob[], error: string): Promise<void> {
   await db.mailJob.updateMany({

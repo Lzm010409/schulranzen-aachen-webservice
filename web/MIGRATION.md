@@ -139,6 +139,13 @@ Die alte Zeilen-ID wandert in `Purchase.legacyId` — daran hängt die
 Wiederholbarkeit: ein zweiter Lauf aktualisiert den Kauf, statt ihn erneut
 anzulegen, und hängt ihn bei Bedarf an den richtigen Kunden um.
 
+### Anrede
+
+Das Altsystem kannte keine Anrede. Übernommene Kunden bekommen deshalb
+*keine Angabe* und damit in Mails die neutrale Form („Guten Tag Anna Müller").
+Wer die Angabe nachträgt — von Hand oder über einen CSV-Import mit einer
+Spalte *Anrede* —, bekommt ab dann „Sehr geehrte Frau Müller".
+
 ### Warengruppe und Saison
 
 Das Altsystem kannte weder das eine noch das andere. Die **Warengruppe** bleibt
@@ -254,6 +261,7 @@ Erwartete Spalten (alle außer dem Namen optional):
 
 | Spalte | Beispiele für die Überschrift |
 | --- | --- |
+| Anrede | Anrede, Salutation, Geschlecht |
 | Vorname | Vorname, First Name |
 | Nachname | Nachname, Name, Last Name |
 | Adresse | Adresse, Straße, Anschrift |
@@ -271,6 +279,11 @@ Erwartete Spalten (alle außer dem Namen optional):
 Datumsangaben werden in `14.08.2024`, `2024-08-14`, `14/08/2024` und als
 Excel-Serienzahl gelesen. Unlesbare Werte führen nicht zum Abbruch — die Zeile
 wird ohne Kaufdatum übernommen und im Bericht genannt.
+
+Bei der Anrede wird nichts geraten: „Frau", „Fr.", „Ms" ergeben *Frau*,
+„Herr", „Hr.", „Mr" ergeben *Herr*, alles andere bleibt ohne Angabe. Aus einem
+Vornamen auf das Geschlecht zu schließen geht bei Kim, Andrea oder Toni
+zuverlässig schief, und eine falsche Anrede fällt beim Empfänger sofort auf.
 
 Fehlt die Spalte *Saison*, wird der Jahrgang aus dem Kaufdatum abgeleitet.
 Steht dort etwas Unlesbares, gilt dasselbe — mit einem Hinweis im Bericht.

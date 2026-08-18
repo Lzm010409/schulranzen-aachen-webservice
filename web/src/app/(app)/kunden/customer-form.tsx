@@ -8,12 +8,14 @@ import {
   Card,
   Field,
   Input,
+  Select,
   Textarea,
 } from "@/components/ui";
 import { saveCustomerAction, type CustomerFormState } from "./actions";
 
 export type CustomerFormValues = {
   id?: string;
+  salutation: string;
   firstName: string;
   lastName: string;
   street: string;
@@ -85,6 +87,22 @@ export function CustomerForm({
 
       <Card title="Stammdaten">
         <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Anrede"
+            htmlFor="salutation"
+            hint="Trägt die Anrede in Mails. Ohne Angabe bleibt sie neutral."
+          >
+            <Select
+              id="salutation"
+              name="salutation"
+              defaultValue={values.salutation}
+            >
+              <option value="UNBEKANNT">keine Angabe</option>
+              <option value="FRAU">Frau</option>
+              <option value="HERR">Herr</option>
+            </Select>
+          </Field>
+          <div />
           <Field label="Vorname" htmlFor="firstName" error={errors.firstName}>
             <Input
               id="firstName"

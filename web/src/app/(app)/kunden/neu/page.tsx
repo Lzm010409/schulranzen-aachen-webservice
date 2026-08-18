@@ -24,6 +24,7 @@ export default async function NewCustomerPage() {
         cancelHref="/kunden"
         products={products.map((p) => p.name)}
         values={{
+          salutation: "UNBEKANNT",
           firstName: "",
           lastName: "",
           street: "",

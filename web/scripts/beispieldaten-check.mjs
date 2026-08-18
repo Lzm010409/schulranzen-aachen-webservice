@@ -44,10 +44,13 @@ try {
   await page.waitForTimeout(2500);
   let body = await page.textContent("body");
 
+  // Spalten: 0 Anrede, 1 Vorname, 2 Nachname, 3 Adresse, 4 PLZ, 5 Stadt,
+  // 6 E-Mail, 7 Telefon, 8 Produkt, 9 Warengruppe, 10 Kaufdatum.
   check("standard.csv: Semikolon und BOM werden erkannt",
-    (await page.inputValue("#spalte_firstName")) === "0" &&
-    (await page.inputValue("#spalte_lastName")) === "1" &&
-    (await page.inputValue("#spalte_email")) === "5");
+    (await page.inputValue("#spalte_firstName")) === "1" &&
+    (await page.inputValue("#spalte_lastName")) === "2" &&
+    (await page.inputValue("#spalte_email")) === "6",
+    `Vorname ${await page.inputValue("#spalte_firstName")}, E-Mail ${await page.inputValue("#spalte_email")}`);
   check("standard.csv: 10 Kunden werden neu angelegt",
     num(body, /(\d+) Kunden werden neu angelegt/) === 10,
     body.match(/\d+ Kunden werden neu angelegt/)?.[0] ?? "?");
@@ -99,11 +102,12 @@ try {
   await page.waitForTimeout(2500);
   body = await page.textContent("body");
   check("problemfaelle: Komma ohne BOM, englische Überschriften erkannt",
-    (await page.inputValue("#spalte_firstName")) === "0" &&
-    (await page.inputValue("#spalte_lastName")) === "1");
+    (await page.inputValue("#spalte_firstName")) === "1" &&
+    (await page.inputValue("#spalte_lastName")) === "2",
+    `Vorname ${await page.inputValue("#spalte_firstName")}`);
   check("problemfaelle: E-Mail-Adresse landet nicht in der Adresse",
-    (await page.inputValue("#spalte_email")) === "5" &&
-    (await page.inputValue("#spalte_street")) === "2",
+    (await page.inputValue("#spalte_email")) === "6" &&
+    (await page.inputValue("#spalte_street")) === "3",
     `email=${await page.inputValue("#spalte_email")}, street=${await page.inputValue("#spalte_street")}`);
   check("problemfaelle: 4 Kunden werden neu angelegt",
     num(body, /(\d+) Kunden werden neu angelegt/) === 4,
@@ -145,6 +149,12 @@ try {
   check("problemfaelle: Adresse mit Komma bleibt eine Adresse",
     sql(`select street from customer where "lastName"='Meurer'`) === "Bergstraße 3, 2. OG",
     sql(`select street from customer where "lastName"='Meurer'`));
+  check("problemfaelle: „Hr.“ wird als Herr gelesen",
+    sql(`select salutation from customer where "lastName"='Meurer'`) === "HERR",
+    sql(`select salutation from customer where "lastName"='Meurer'`));
+  check("problemfaelle: „Firma“ lässt sich nicht zuordnen und wird nicht geraten",
+    sql(`select salutation from customer where "lastName"='Oberst'`) === "UNBEKANNT",
+    sql(`select salutation from customer where "lastName"='Oberst'`));
   check("problemfaelle: unbekanntes Produkt wurde angelegt",
     sql(`select count(*) from product where name='Neuprodukt Wanderrucksack'`) === "1");
   check("problemfaelle: Zeile ohne Namen wurde nicht angelegt",

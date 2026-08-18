@@ -1,5 +1,6 @@
 import { requirePermissionOrRedirect } from "@/lib/auth";
 import { PageHeader } from "@/components/ui";
+import { buildPreviewVars } from "@/lib/mail-vars";
 import { TemplateEditor } from "../template-editor";
 
 export const metadata = { title: "Vorlage anlegen" };
@@ -41,6 +42,7 @@ const STARTER = `<!doctype html>
 
 export default async function NewTemplatePage() {
   await requirePermissionOrRedirect("vorlagen.verwalten");
+  const beispiel = await buildPreviewVars();
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -49,6 +51,8 @@ export default async function NewTemplatePage() {
         description="Das vorbelegte Grundgerüst enthält bereits Kopf, Fuß, Impressum und Abmeldelink."
       />
       <TemplateEditor
+        beispiel={beispiel.vars as Record<string, string>}
+        beispielName={beispiel.quelle}
         cancelHref="/vorlagen"
         values={{
           name: "",

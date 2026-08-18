@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
+import { SALUTATION_LABEL } from "@/lib/template";
 import { getSession } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { recordAudit } from "@/lib/audit";
@@ -15,6 +16,11 @@ import {
 export const dynamic = "force-dynamic";
 
 const COLUMNS: ExportColumn<CustomerListRow>[] = [
+  {
+    header: "Anrede",
+    value: (c) => SALUTATION_LABEL[c.salutation] ?? "",
+    width: 12,
+  },
   { header: "Vorname", value: (c) => c.firstName, width: 18 },
   { header: "Nachname", value: (c) => c.lastName, width: 20 },
   { header: "Adresse", value: (c) => c.street, width: 30 },

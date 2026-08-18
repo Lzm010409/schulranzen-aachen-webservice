@@ -14,7 +14,8 @@ import {
   loadAccount,
   unsubscribeUrlFor,
 } from "@/lib/mailer";
-import { buildSalutation, renderEmail, renderPlaceholders } from "@/lib/template";
+import { renderEmail, renderPlaceholders } from "@/lib/template";
+import { buildCustomerVars } from "@/lib/mail-vars";
 import { flash } from "@/lib/flash";
 
 const MAX_ATTACHMENT_TOTAL = 10 * 1024 * 1024;
@@ -150,39 +151,20 @@ export async function sendTestMailAction(
   }
 
   // Für den Test wird ein echter Empfänger der Kampagne als Datenquelle
-  // genutzt, damit die Platzhalter realistisch gefüllt sind.
+  // genutzt, damit die Platzhalter zeigen, was tatsächlich ankommt —
+  // derselbe Baustein wie beim Versand, nicht eine zweite Zuordnung daneben.
   const sampleJob = await db.mailJob.findFirst({
-    where: { campaignId },
-    include: {
-      customer: {
-        include: {
-          purchases: {
-            orderBy: [{ purchasedAt: "desc" }],
-            take: 1,
-            include: { product: true },
-          },
-        },
-      },
-    },
+    where: { campaignId, customerId: { not: null } },
+    select: { customerId: true, toName: true },
   });
-  const customer = sampleJob?.customer;
-  const latest = customer?.purchases[0];
 
-  const vars = {
-    vorname: customer?.firstName ?? "Anna",
-    nachname: customer?.lastName ?? "Beispiel",
-    anrede: buildSalutation(
-      customer?.firstName ?? "Anna",
-      customer?.lastName ?? "Beispiel",
-    ),
-    stadt: customer?.city ?? "Aachen",
-    plz: customer?.zip ?? "52062",
-    produkt: latest?.product.name ?? "Beispielprodukt",
-    kaufdatum: latest?.purchasedAt?.toLocaleDateString("de-DE") ?? "01.01.2024",
-  };
+  const vars = await buildCustomerVars(
+    sampleJob?.customerId ?? null,
+    sampleJob?.toName ?? "",
+  );
 
-  const unsubscribeUrl = customer
-    ? await unsubscribeUrlFor(customer.id)
+  const unsubscribeUrl = sampleJob?.customerId
+    ? await unsubscribeUrlFor(sampleJob.customerId)
     : `${process.env.APP_URL ?? ""}/abmelden/test`;
 
   const { html, text } = renderEmail({

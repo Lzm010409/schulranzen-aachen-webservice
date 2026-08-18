@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { requirePermissionOrRedirect } from "@/lib/auth";
 import { Alert, LinkButton, PageHeader } from "@/components/ui";
 import { buildWhere, describeFilter, parseFilter } from "@/lib/customer-filter";
+import { buildPreviewVars } from "@/lib/mail-vars";
 import { CampaignForm } from "../campaign-form";
 
 export const metadata = { title: "Neue Kampagne" };
@@ -26,6 +27,15 @@ export default async function NewCampaignPage({
     source === "filter"
       ? buildWhere(filter)
       : { id: { in: ids }, deletedAt: null };
+
+  // Die Vorschau zeigt einen echten Empfänger dieser Auswahl, nicht
+  // „Anna Beispiel“ — nur so sieht man, was tatsächlich ankommt.
+  const ersterEmpfaenger = await db.customer.findFirst({
+    where,
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    select: { id: true },
+  });
+  const beispiel = await buildPreviewVars(ersterEmpfaenger?.id ?? null);
 
   const [accounts, templates, stats, product] = await Promise.all([
     db.mailAccount.findMany({
@@ -85,6 +95,8 @@ export default async function NewCampaignPage({
       />
 
       <CampaignForm
+        beispiel={beispiel.vars as Record<string, string>}
+        beispielName={beispiel.quelle}
         source={source}
         ids={ids}
         filter={filter}

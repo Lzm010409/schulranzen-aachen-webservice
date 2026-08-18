@@ -124,10 +124,21 @@ model Product {
   @@map("product")
 }
 
+/// Anrede einer Person. Ohne sie laesst sich {{anrede}} nicht sauber bilden:
+/// „Sehr geehrte Frau Mueller" braucht das Geschlecht, und Raten am Vornamen
+/// geht bei Kim, Andrea oder Toni zuverlaessig schief.
+enum Salutation {
+  FRAU
+  HERR
+  /// Nicht bekannt — die Anrede weicht dann auf eine neutrale Form aus.
+  UNBEKANNT
+}
+
 model Customer {
-  id        String  @id @default(cuid())
-  firstName String
-  lastName  String
+  id         String     @id @default(cuid())
+  salutation Salutation @default(UNBEKANNT)
+  firstName  String
+  lastName   String
   street    String
   zip       String
   city      String

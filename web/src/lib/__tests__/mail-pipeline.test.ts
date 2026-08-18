@@ -79,7 +79,12 @@ describe.skipIf(!hasDatabase)("Versand-Pipeline", () => {
     ids.product = product.id;
 
     const people = [
-      { first: "Erika", last: "Empfang", email: `erika.${stamp}@example.de` },
+      {
+        first: "Erika",
+        last: "Empfang",
+        email: `erika.${stamp}@example.de`,
+        salutation: "FRAU" as const,
+      },
       { first: "Klaus", last: "Kaputt", email: REJECTED },
       { first: "Ohne", last: "Adresse", email: null },
       {
@@ -99,6 +104,7 @@ describe.skipIf(!hasDatabase)("Versand-Pipeline", () => {
     for (const person of people) {
       const customer = await db.customer.create({
         data: {
+          salutation: person.salutation ?? "UNBEKANNT",
           firstName: person.first,
           lastName: person.last,
           street: "Teststr. 1",
@@ -235,7 +241,11 @@ describe.skipIf(!hasDatabase)("Versand-Pipeline", () => {
 
   it("versendet genau eine Mail mit gefüllten Platzhaltern", () => {
     expect(sink.received).toHaveLength(1);
-    expect(decoded).toContain("Hallo Erika Empfang");
+    // Die Anrede kommt aus dem Feld am Kunden und geht durch die ganze
+    // Strecke: Datenbank → Worker → SMTP.
+    expect(decoded).toContain("Sehr geehrte Frau Empfang");
+    // Kein Platzhalter darf woertlich beim Empfaenger ankommen.
+    expect(decoded).not.toMatch(/\{\{\s*[a-z_]+\s*\}\}/i);
     expect(decoded).toContain(`Testranzen ${stamp}`);
   });
 

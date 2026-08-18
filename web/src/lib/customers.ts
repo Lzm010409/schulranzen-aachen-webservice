@@ -122,6 +122,7 @@ export async function mergeProducts(
 
 export const customerListSelect = {
   id: true,
+  salutation: true,
   firstName: true,
   lastName: true,
   street: true,

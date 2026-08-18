@@ -110,6 +110,33 @@ Das läuft durch dieselbe Strecke wie eine echte Mail — Platzhalter füllen,
 sanitisieren, Abmeldelink prüfen. Was dabei herauskommt, ist genau das, was
 der Empfänger bekommt.
 
+## Platzhalter in Mails
+
+| Platzhalter | Wird ersetzt durch |
+| --- | --- |
+| `{{anrede}}` | „Sehr geehrte Frau Müller" · „Sehr geehrter Herr Schmitz" · ohne Angabe „Guten Tag Anna Müller" |
+| `{{anrede_kurz}}` | „Hallo Anna" |
+| `{{vorname}}` · `{{nachname}}` | Name des Kunden |
+| `{{stadt}}` · `{{plz}}` | Anschrift |
+| `{{produkt}}` · `{{warengruppe}}` | letzter Kauf |
+| `{{kaufdatum}}` · `{{saison}}` | Datum und Einschulungsjahrgang des letzten Kaufs |
+| `{{abmeldelink}}` | persönlicher Abmeldelink (Pflicht) |
+| `{{content}}` | nur in Vorlagen: Platz für den Kampagnentext |
+
+Die Werte kommen aus **einer** Stelle (`src/lib/mail-vars.ts`) — für den
+Versand, die Testmail und die Vorschau. Vorher stand dieselbe Zuordnung
+dreimal im Code und lief auseinander: die Vorschau zeigte fest „Anna
+Beispiel", egal welcher Kunde gemeint war.
+
+Für die Anrede braucht es das Geschlecht; es steht als Feld am Kunden
+(*Frau*, *Herr*, *keine Angabe*) und wird beim Import aus einer Spalte
+*Anrede* gelesen. Geraten wird nichts — aus einem Vornamen auf das Geschlecht
+zu schließen geht bei Kim, Andrea oder Toni schief.
+
+Jeder bekannte Platzhalter bekommt beim Versand einen Wert, notfalls einen
+leeren. Sonst stünde beim Empfänger wörtlich `{{vorname}}` in der Mail — was
+passierte, wenn ein Kunde zwischen Einreihen und Versand gelöscht wurde.
+
 ## Rückmeldung und Ladezustand
 
 Jede Änderung meldet sich: gespeichert, angelegt, gelöscht, wiederhergestellt,
@@ -210,7 +237,7 @@ openssl rand -base64 32       # für ENCRYPTION_KEY (muss genau 32 Byte sein)
 ## Tests
 
 ```bash
-npm test                      # 185 Tests: Normalisierung, Mailaufbau, Export,
+npm test                      # 191 Tests: Normalisierung, Mailaufbau, Export,
                               # SMTP-Fehler, Rechte, Import, Versandstrecke
 npm run typecheck
 

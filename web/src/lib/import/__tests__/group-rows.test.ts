@@ -11,6 +11,7 @@ type Row = Parameters<typeof groupRows>[0][number];
 function row(partial: Partial<Row>): Row {
   return {
     row: 2,
+    salutation: "UNBEKANNT",
     firstName: "Lars",
     lastName: "Meurer",
     street: "Bergstraße 3",
