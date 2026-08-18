@@ -76,7 +76,15 @@ in `src/lib/__tests__/vorlage-coocazoo.test.ts` festgehalten.
 
 | Vorlage | Wofür |
 | --- | --- |
+| `standard-klassik.html` | Allzweck: roter Kopf, Fließtext, Öffnungszeiten, dunkle Fußzeile |
+| `standard-aktion.html` | Ranzenwochen, Sonderangebote, Events: großer Aufmacher, Bildfläche, die vier Argumente der Website |
+| `standard-brief.html` | Persönliche Nachrichten: Terminbestätigung, Erinnerung, Service — viel Weißraum, feine rote Linie |
 | `coocazoo-colour-up.html` | Aktionsmail zum Colour-Up-Event: grünes Kopfband, Titelblock, Bildfläche, roter Terminknopf, Ablauf in drei Schritten |
+
+Farben, Schriften und feste Angaben stammen aus der Website und stehen in
+[`vorlagen/_styleguide.md`](./vorlagen/_styleguide.md) — Markenrot `#D7232A`,
+Roboto, Trierer Straße 785. Alle Fußzeilen führen Impressum und
+Datenschutzerklärung, wie es geschäftliche Post in Deutschland verlangt.
 
 Bilder gehören nach `public/bilder/` und sind dann unter der eigenen Domain
 erreichbar. Fehlt ein Bild, bleibt die Fläche farbig stehen und der
@@ -192,7 +200,7 @@ openssl rand -base64 32       # für ENCRYPTION_KEY (muss genau 32 Byte sein)
 ## Tests
 
 ```bash
-npm test                      # 149 Tests: Normalisierung, Mailaufbau, Export,
+npm test                      # 167 Tests: Normalisierung, Mailaufbau, Export,
                               # SMTP-Fehler, Rechte, Import, Versandstrecke
 npm run typecheck
 

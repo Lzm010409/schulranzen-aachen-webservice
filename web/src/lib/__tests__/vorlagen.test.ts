@@ -13,10 +13,14 @@ const LAYOUT = readFileSync(
   "utf8",
 );
 
-function render(body = "Wir freuen uns auf Sie!") {
+function layout(datei: string) {
+  return readFileSync(join(process.cwd(), "vorlagen", datei), "utf8");
+}
+
+function render(body = "Wir freuen uns auf Sie!", vorlage = LAYOUT) {
   return renderEmail({
     body,
-    templateBody: LAYOUT,
+    templateBody: vorlage,
     templateIsHtml: true,
     vars: {
       anrede: "Hallo Anna Beispiel",
@@ -81,5 +85,54 @@ describe("Vorlage „coocazoo Colour Up“", () => {
   it("laesst keinen unbekannten Platzhalter stehen", () => {
     const { html } = render();
     expect(html).not.toMatch(/\{\{\s*[a-z]+\s*\}\}/i);
+  });
+});
+
+/**
+ * Die drei Standardentwuerfe gehen durch dieselbe Strecke. Geprueft wird, was
+ * bei allen dreien gleich sein muss — der Rest ist Gestaltung.
+ */
+describe.each([
+  ["Klassik", "standard-klassik.html"],
+  ["Aktion", "standard-aktion.html"],
+  ["Brief", "standard-brief.html"],
+])("Standardvorlage „%s“", (_name, datei) => {
+  const vorlage = layout(datei);
+
+  it("nimmt den Kampagnentext auf", () => {
+    const { html } = render("Am 12. Oktober ist es so weit.", vorlage);
+    expect(html).toContain("Am 12. Oktober ist es so weit.");
+    expect(html).not.toContain("{{content}}");
+  });
+
+  it("füllt die Anrede", () => {
+    const { html } = render(undefined, vorlage);
+    expect(html).toContain("Hallo Anna Beispiel");
+  });
+
+  it("trägt den Abmeldelink genau einmal", () => {
+    const { html } = render(undefined, vorlage);
+    const treffer =
+      html.split("https://schulranzen.example/abmelden/abc123").length - 1;
+    expect(treffer).toBe(1);
+  });
+
+  it("behält die Markenfarbe und das Tabellenlayout", () => {
+    const { html } = render(undefined, vorlage);
+    expect(html).toContain("#D7232A");
+    expect(html).toContain("<table");
+  });
+
+  it("nennt die richtige Anschrift und Telefonnummer", () => {
+    const { html } = render(undefined, vorlage);
+    expect(html).toContain("Trierer Straße 785");
+    expect(html).toContain("52078 Aachen");
+    expect(html).toContain("0241 99030773");
+  });
+
+  it("lässt keinen Platzhalter und keinen Kommentar stehen", () => {
+    const { html } = render(undefined, vorlage);
+    expect(html).not.toMatch(/\{\{\s*[a-z]+\s*\}\}/i);
+    expect(html).not.toContain("<!--");
   });
 });
