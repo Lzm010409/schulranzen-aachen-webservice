@@ -144,14 +144,30 @@ export async function writeResult(
   await db.$transaction(
     async (tx) => {
       for (const product of result.products) {
+        const legacyId = product.legacyIds[0];
+
+        // Gesucht wird ueber den Namen (den Slug), vermerkt wird die alte
+        // Kennung — und beide sind fuer sich eindeutig. Ein zweiter Lauf mit
+        // einem neueren Auszug kann dieselbe Kennung an einem anderen Namen
+        // mitbringen, etwa weil ein Tippfehler im Altsystem berichtigt wurde.
+        // Dann haengt die Kennung noch am alten Artikel und der Schreibvorgang
+        // scheitert. Sie gehoert zum Datensatz des Altsystems, nicht zum
+        // Namen, also wird sie dort geloest und hier neu gesetzt.
+        const belegt = await tx.product.findUnique({
+          where: { legacyId },
+          select: { id: true, slug: true },
+        });
+        if (belegt && belegt.slug !== product.slug) {
+          await tx.product.update({
+            where: { id: belegt.id },
+            data: { legacyId: null },
+          });
+        }
+
         const saved = await tx.product.upsert({
           where: { slug: product.slug },
-          update: { name: product.name, legacyId: product.legacyIds[0] },
-          create: {
-            name: product.name,
-            slug: product.slug,
-            legacyId: product.legacyIds[0],
-          },
+          update: { name: product.name, legacyId },
+          create: { name: product.name, slug: product.slug, legacyId },
         });
         productIdBySlug.set(product.slug, saved.id);
       }

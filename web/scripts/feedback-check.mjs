@@ -106,9 +106,17 @@ try {
   text = await flashText();
   check("Produkt anlegen meldet sich", /angelegt/i.test(text), text);
 
-  await page.goto(`${B}/produkte`);
-  await settle();
+  // Der Katalog kann mehrere tausend Artikel haben; das neue Produkt steht
+  // dann nicht auf der ersten Seite. Also durchblättern, bis es auftaucht.
   const row = page.locator("tbody tr", { hasText: `Testprodukt ${RUN}` });
+  let gefunden = false;
+  for (let seite = 1; seite <= 40 && !gefunden; seite++) {
+    await page.goto(`${B}/produkte?proSeite=200&seite=${seite}`);
+    await settle();
+    if ((await row.count()) > 0) gefunden = true;
+    else if ((await page.locator("tbody tr").count()) === 0) break;
+  }
+  check("Das neue Produkt steht im Katalog", gefunden);
   await row.locator('button:has-text("Löschen")').click();
   text = await flashText();
   check("Produkt löschen meldet sich", /gelöscht/i.test(text), text);
