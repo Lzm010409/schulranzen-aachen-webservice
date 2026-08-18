@@ -1,0 +1,8 @@
+First Name,Last Name,Adresse,Postleitzahl,Ort,E-Mail-Adresse,Telefonnummer,Artikel,Gekauft am,Bemerkung
+  Lars , Meurer ,"Bergstraße 3, 2. OG",D-52064,Aachen,  LARS.MEURER@Example.DE  ,0241/40 88 901,Ergobag Cubo,2024-08-14,Stammkunde
+Lars,Meurer,"Bergstraße 3, 2. OG",52064,Aachen,,0241 4088901,Federmäppchen Set,45518,
+Miriam,Nowak,Am Hang 12,52074,Aachen,miriam(at)example.de,+49 241 4099012,Satch Pack,01/09/2023,Mailadresse unklar
+Norbert,Oberst,"""Zum Hof"" 7",52070,Aachen,n.oberst@example.de,0049 241 4010123,Scout Sunny,demnächst,
+,,,,,,,,,
+,,Unbekannt 1,52062,Aachen,,,Ergobag Cubo,01.01.2024,Zeile ohne Namen
+Petra,Quirin,Talstr. 8,52078,Aachen,p.quirin@example.de,0241 4021234,Neuprodukt Wanderrucksack,12.08.2025,neues Produkt

@@ -250,18 +250,49 @@ async function attachMatches(rows: PreparedRow[]): Promise<void> {
   }
 }
 
-/** Fasst Zeilen zusammen, die dieselbe Person meinen. */
-function groupRows(rows: PreparedRow[]): PreparedRow[][] {
-  const groups = new Map<string, PreparedRow[]>();
+/**
+ * Fasst Zeilen zusammen, die dieselbe Person meinen — dieselbe Reihenfolge wie
+ * bei der Uebernahme aus dem Altsystem: erst die E-Mail-Adresse, dann Name +
+ * PLZ + Strasse.
+ *
+ * Beide Merkmale muessen greifen, nicht nur eines: In der Praxis steht
+ * dieselbe Person einmal mit und einmal ohne Mailadresse in der Datei (zweiter
+ * Kauf, Adresse nicht erneut erfasst). Wuerde nur nach E-Mail gruppiert, sobald
+ * eine vorhanden ist, entstuenden daraus zwei Kunden.
+ */
+export function groupRows(rows: PreparedRow[]): PreparedRow[][] {
+  const groups: PreparedRow[][] = [];
+  const byEmail = new Map<string, PreparedRow[]>();
+  const byName = new Map<string, PreparedRow[]>();
+
+  const nameKey = (row: PreparedRow) =>
+    [
+      row.firstName.toLowerCase(),
+      row.lastName.toLowerCase(),
+      row.zip,
+      row.street.toLowerCase(),
+    ].join("|");
+
   for (const row of rows) {
-    const key = row.email
-      ? `mail:${row.email}`
-      : `name:${row.firstName.toLowerCase()}|${row.lastName.toLowerCase()}|${row.zip}|${row.street.toLowerCase()}`;
-    const list = groups.get(key) ?? [];
-    list.push(row);
-    groups.set(key, list);
+    const key = nameKey(row);
+    const existing =
+      (row.email ? byEmail.get(row.email) : undefined) ?? byName.get(key);
+
+    if (existing) {
+      existing.push(row);
+      // Bringt diese Zeile die Mailadresse erstmals mit, findet die naechste
+      // Zeile mit derselben Adresse die Gruppe ebenfalls.
+      if (row.email && !byEmail.has(row.email)) byEmail.set(row.email, existing);
+      continue;
+    }
+
+    const group = [row];
+    groups.push(group);
+    byName.set(key, group);
+    if (row.email) byEmail.set(row.email, group);
   }
-  return [...groups.values()];
+
+  return groups;
 }
 
 export async function buildPreview(

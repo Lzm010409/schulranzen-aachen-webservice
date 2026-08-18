@@ -15,7 +15,8 @@
     "prisma:studio": "prisma studio",
     "seed": "tsx scripts/seed.ts",
     "etl:import": "tsx scripts/etl/import.ts",
-    "testdaten": "tsx scripts/testdaten.ts"
+    "testdaten": "tsx scripts/testdaten.ts",
+    "beispieldaten": "tsx scripts/beispieldaten.ts"
   },
   "prisma": {
     "seed": "tsx scripts/seed.ts"

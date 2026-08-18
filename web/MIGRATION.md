@@ -239,6 +239,23 @@ wird ohne Kaufdatum übernommen und im Bericht genannt.
 
 ---
 
+## Beispieldateien zum Ausprobieren
+
+Unter [`beispieldaten/`](./beispieldaten/) liegen fertige Dateien für beide
+Importwege — neu erzeugen mit `npm run beispieldaten`:
+
+| Datei | Wofür |
+| --- | --- |
+| `kunden-standard.csv` | Der Normalfall, so wie Excel speichert: Semikolon, UTF-8 mit BOM. Zwölf Zeilen, zehn Personen — zwei davon mit zwei Käufen. |
+| `kunden-standard.xlsx` | Dieselben Daten als Excel-Mappe. |
+| `kunden-problemfaelle.csv` | Komma statt Semikolon, kein BOM, englische Überschriften, `E-Mail-Adresse` direkt neben `Adresse`, Excel-Serienzahl als Datum, ungültige Mailadresse, unlesbares Datum, leere Zeile, Zeile ohne Namen, unbekanntes Produkt. |
+| `altsystem-export.sql` | Abzug im alten Schema: neun Zeilen „ein Kunde, ein Produkt", daraus sechs Kunden mit acht Käufen. |
+
+Was jede Datei ergeben soll, steht in `beispieldaten/README.md` — und wird von
+`node scripts/beispieldaten-check.mjs` gegen eine laufende Instanz nachgeprüft.
+
+---
+
 ## Testdaten
 
 Für Schulung und Abnahme:

@@ -86,7 +86,7 @@ openssl rand -base64 32       # für ENCRYPTION_KEY (muss genau 32 Byte sein)
 ## Tests
 
 ```bash
-npm test                      # 106 Tests: Normalisierung, Mailaufbau, Export,
+npm test                      # 112 Tests: Normalisierung, Mailaufbau, Export,
                               # SMTP-Fehler, Rechte, Import, Versandstrecke
 npm run typecheck
 
@@ -94,6 +94,11 @@ npm run typecheck
 node scripts/smoke.mjs http://localhost:3000              # 25 Prüfungen
 node scripts/permissions-check.mjs http://localhost:3000  # 16 Prüfungen
 node scripts/import-check.mjs http://localhost:3000 legacy.dump  # 18 Prüfungen
+
+# Beispieldateien gegen ihre Beschreibung prüfen (leert dabei den Bestand,
+# deshalb nur gegen eine eigene Testdatenbank laufen lassen)
+node scripts/beispieldaten-check.mjs http://localhost:3000 \
+  postgresql://…/testdatenbank                            # 46 Prüfungen
 ```
 
 `permissions-check.mjs` legt ein Konto mit der Vorlage *Nur Lesen* an, meldet
@@ -135,6 +140,8 @@ scripts/
   smoke.mjs               End-to-End-Test im Browser
   permissions-check.mjs   prüft die Rechte am laufenden System
   import-check.mjs        prüft beide Importwege am laufenden System
+  beispieldaten.ts        erzeugt die Beispieldateien
+  beispieldaten-check.mjs prüft die Beispieldateien gegen ihre Beschreibung
   etl/import.ts           Übernahme aus dem Altsystem (Kommandozeile)
 ```
 
@@ -165,6 +172,11 @@ Testdaten für Schulung und Abnahme:
 ```bash
 npm run testdaten          # anlegen (wiederholbar)
 npm run testdaten -- --weg # wieder entfernen
+npm run beispieldaten      # Beispieldateien zum Ausprobieren des Imports
 ```
+
+Die Beispieldateien liegen unter [`beispieldaten/`](./beispieldaten/) — eine
+saubere Kundenliste als CSV und als Excel-Mappe, eine bewusst unbequeme Datei
+mit den üblichen Stolperstellen und ein Abzug im Schema des Altsystems.
 
 Alle Einzelheiten in [MIGRATION.md](./MIGRATION.md).
