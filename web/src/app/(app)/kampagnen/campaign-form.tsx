@@ -12,6 +12,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { PLACEHOLDERS } from "@/lib/template";
+import { BildUpload } from "@/components/bild-upload";
 import type { CustomerFilter } from "@/lib/customer-filter";
 import { createCampaignAction, type CampaignFormState } from "./actions";
 
@@ -247,6 +248,8 @@ export function CampaignForm({
               placeholder="Guten Tag,&#10;&#10;…"
             />
           </Field>
+
+          <BildUpload onInsert={(html) => setBody((v) => `${v}\n${html}`)} />
 
           <div className="flex flex-wrap gap-1.5">
             <span className="text-xs text-slate-500">Platzhalter:</span>

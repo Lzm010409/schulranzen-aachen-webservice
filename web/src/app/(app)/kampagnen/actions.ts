@@ -17,6 +17,7 @@ import {
 import { renderEmail, renderPlaceholders } from "@/lib/template";
 import { buildCustomerVars } from "@/lib/mail-vars";
 import { flash } from "@/lib/flash";
+import { lagereBilderAus } from "@/lib/mail-images";
 
 const MAX_ATTACHMENT_TOTAL = 10 * 1024 * 1024;
 
@@ -80,11 +81,16 @@ export async function createCampaignAction(
     return { errors: { _: "Es wurden keine Empfänger ausgewählt." } };
   }
 
+  // Auch der Kampagnentext kann eingebettete Bilder enthalten — dieselbe
+  // Behandlung wie bei den Vorlagen, sonst kommt die Mail bei Gmail ohne
+  // Bilder oder abgeschnitten an.
+  const bilder = await lagereBilderAus(parsed.data.body, { userId: user.id });
+
   const campaign = await db.campaign.create({
     data: {
       name: parsed.data.name,
       subject: parsed.data.subject,
-      body: parsed.data.body,
+      body: bilder.html,
       templateId: parsed.data.templateId,
       accountId: parsed.data.accountId,
       createdById: user.id,

@@ -167,9 +167,16 @@ try {
   await page.waitForURL(/proSeite=100/, { timeout: 30000 }).catch(() => undefined);
   await settle();
   let zeilen = await page.locator("tbody tr").count();
+  // Bei weniger als hundert Kunden im Bestand ist die Seite eben kuerzer —
+  // gemessen wird die eingestellte Groesse, nicht der Datenbestand.
+  const gesamt = Number(
+    (await page.locator(".pagination-info p").first().textContent())
+      ?.split("von")[1]
+      ?.replace(/\D/g, "") ?? "0",
+  );
   check("Die gewählte Größe wirkt sofort",
-    zeilen === 100 && page.url().includes("proSeite=100"),
-    `${zeilen} Zeilen, ${new URL(page.url()).search}`);
+    zeilen === Math.min(100, gesamt) && page.url().includes("proSeite=100"),
+    `${zeilen} von ${gesamt} Zeilen, ${new URL(page.url()).search}`);
 
   check("Die Auswahl zeigt die aktive Größe",
     (await page.locator(".page-size-select").first().inputValue()) === "100");

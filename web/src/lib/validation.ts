@@ -146,7 +146,7 @@ export function describeBodyLength(length: number): string {
 
 const bodyField = (pflicht: boolean) => {
   const feld = z.string().max(MAX_BODY_LENGTH, {
-    message: `Der Inhalt ist zu lang — erlaubt sind ${MAX_BODY_LENGTH.toLocaleString("de-DE")} Zeichen. Eingebettete Bilder (data:) verbrauchen ein Vielfaches ihrer Dateigröße; besser als Datei unter public/bilder/ ablegen und verlinken.`,
+    message: `Der Inhalt ist zu lang — erlaubt sind ${MAX_BODY_LENGTH.toLocaleString("de-DE")} Zeichen. Eingebettete Bilder (data:) verbrauchen ein Vielfaches ihrer Dateigröße; mit „Bild einfügen“ landet die Datei in der Bildablage und im Text steht nur die Adresse.`,
   });
   return pflicht ? feld.min(1, "Der Inhalt darf nicht leer sein") : feld;
 };

@@ -24,6 +24,24 @@ describe("Mailtauglichkeit", () => {
     expect(befund?.text).toMatch(/Gmail/);
   });
 
+  it("meldet Text hinter dem schließenden body-Tag", () => {
+    const html = `<html><body>${sauber}</body>{{anrede}},{{content}}</html>`;
+    const befund = pruefeMailtauglichkeit(html).find((b) =>
+      b.titel.includes("hinter </body>"),
+    );
+    expect(befund?.schwere).toBe("fehler");
+  });
+
+  it("stört sich nicht an Leerraum hinter </body>", () => {
+    const html = `<html><body>${sauber}</body>\n</html>\n`;
+    expect(titel(html)).not.toContain("Text steht hinter </body>");
+  });
+
+  it("hält ein </body> im Kommentar nicht für Inhalt", () => {
+    const html = `<html><!-- alles gehört vor </body> --><body>${sauber}</body></html>`;
+    expect(titel(html)).not.toContain("Text steht hinter </body>");
+  });
+
   it("meldet, wenn Gmail abschneiden würde", () => {
     const html = sauber + "<p>" + "x".repeat(GMAIL_LIMIT) + "</p>";
     const befund = pruefeMailtauglichkeit(html).find((b) =>

@@ -103,6 +103,7 @@ describe.each([
   ["Klassik", "standard-klassik.html"],
   ["Aktion", "standard-aktion.html"],
   ["Brief", "standard-brief.html"],
+  ["Bild", "standard-bild.html"],
 ])("Standardvorlage „%s“", (_name, datei) => {
   const vorlage = layout(datei);
 
@@ -249,7 +250,7 @@ describe("Grenze für die Größe einer Vorlage", () => {
       // Die Meldung muss sagen, was zu tun ist — „Too big" half niemandem.
       const text = ergebnis.error.issues.map((i) => i.message).join(" ");
       expect(text).toMatch(/zu lang/i);
-      expect(text).toMatch(/public\/bilder/);
+      expect(text).toMatch(/Bild einfügen/);
     }
   });
 
@@ -279,6 +280,7 @@ describe.each([
   ["Klassik", "standard-klassik.html"],
   ["Aktion", "standard-aktion.html"],
   ["Brief", "standard-brief.html"],
+  ["Bild", "standard-bild.html"],
 ])("Mailtauglichkeit der Vorlage „%s“", (_name, datei) => {
   const vorlage = layout(datei);
 

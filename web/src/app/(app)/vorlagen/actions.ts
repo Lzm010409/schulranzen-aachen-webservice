@@ -8,6 +8,7 @@ import { recordAudit } from "@/lib/audit";
 import { fieldErrors, templateSchema } from "@/lib/validation";
 import { unknownPlaceholders } from "@/lib/template";
 import { flash } from "@/lib/flash";
+import { lagereBilderAus, speichereBild } from "@/lib/mail-images";
 
 export type TemplateFormState = {
   errors?: Record<string, string>;
@@ -30,7 +31,12 @@ export async function saveTemplateAction(
   });
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
 
-  const data = parsed.data;
+  // Eingebettete Bilder muessen raus, bevor irgendetwas gespeichert wird:
+  // Gmail zeigt sie nicht an und sie sprengen die Groesse, ab der Gmail die
+  // ganze Nachricht abschneidet. Sie landen in der Bildablage und stehen
+  // danach als gewoehnliche Adresse in der Vorlage.
+  const bilder = await lagereBilderAus(parsed.data.body, { userId: user.id });
+  const data = { ...parsed.data, body: bilder.html };
 
   const savedId = await db.$transaction(async (tx) => {
     if (!id) {
@@ -85,7 +91,21 @@ export async function saveTemplateAction(
     diff: { name: data.name, subject: data.subject },
   });
 
-  await flash.gespeichert("Vorlage", data.name);
+  if (bilder.probleme.length > 0) {
+    // Gespeichert ist die Vorlage, aber ein Bild steckt noch eingebettet
+    // darin. Das muss der Bearbeiter jetzt erfahren und nicht erst, wenn die
+    // Mail beim Empfaenger leer bleibt.
+    await flash.warnung(
+      `Vorlage gespeichert. ${bilder.probleme.length} Bild(er) blieben eingebettet: ${bilder.probleme.join(" ")}`,
+    );
+  } else {
+    await flash.gespeichert(
+      "Vorlage",
+      bilder.ausgelagert > 0
+        ? `${data.name} — ${bilder.ausgelagert} Bild(er) ausgelagert und verlinkt`
+        : data.name,
+    );
+  }
   revalidatePath("/vorlagen");
   redirect(`/vorlagen/${savedId}`);
 }

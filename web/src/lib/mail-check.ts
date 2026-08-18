@@ -36,7 +36,7 @@ export function pruefeMailtauglichkeit(html: string): MailBefund[] {
     befunde.push({
       schwere: "fehler",
       titel: "Gmail schneidet diese Mail ab",
-      text: `Die Nachricht ist ${(groesse / 1024).toFixed(0)} KB groß. Gmail zeigt ab etwa 102 KB „Nachricht gekürzt“ — alles danach fehlt, samt Abmeldelink. Bilder verlinken statt einbetten spart am meisten.`,
+      text: `Die Nachricht ist ${(groesse / 1024).toFixed(0)} KB groß. Gmail zeigt ab etwa 102 KB „Nachricht gekürzt“ — alles danach fehlt, samt Abmeldelink. Eingebettete Bilder machen den größten Teil aus; sie werden beim Speichern ausgelagert.`,
     });
   } else if (groesse > GMAIL_WARNUNG) {
     befunde.push({
@@ -52,7 +52,7 @@ export function pruefeMailtauglichkeit(html: string): MailBefund[] {
     befunde.push({
       schwere: "fehler",
       titel: `${eingebettet} eingebettete${eingebettet === 1 ? "s" : ""} Bild${eingebettet === 1 ? "" : "er"}`,
-      text: "Gmail zeigt Bilder als data:-URI nicht an — an der Stelle bleibt die Mail leer. Das Bild unter public/bilder/ ablegen und verlinken.",
+      text: "Gmail zeigt Bilder als data:-URI nicht an — an der Stelle bleibt die Mail leer. Beim Speichern werden sie automatisch in die Bildablage übernommen und verlinkt; „Bild einfügen“ nimmt den Umweg gar nicht erst.",
     });
   }
 
@@ -83,6 +83,22 @@ export function pruefeMailtauglichkeit(html: string): MailBefund[] {
       schwere: "hinweis",
       titel: "Hintergrundfarbe steht nur am <body>",
       text: "Gmail entfernt <body>; die Fläche um den Inhalt bleibt weiß. Die Farbe gehört zusätzlich als bgcolor an die äußere Tabelle.",
+    });
+  }
+
+  // ------------------------------------------------- Inhalt ausserhalb <body>
+  // Kommt aus Baukaesten, die den Text hinter das schliessende Tag haengen.
+  // Browser schieben ihn stillschweigend zurueck, Mailprogramme nicht alle.
+  // Kommentare zuerst weg und den *letzten* Treffer nehmen: ein `</body>` in
+  // einer Erlaeuterung ist keins.
+  const ohneKommentare = html.replace(/<!--[\s\S]*?-->/g, "");
+  const teile = ohneKommentare.split(/<\/body\s*>/i);
+  const nachBody = teile.length > 1 ? teile[teile.length - 1] : "";
+  if (teile.length > 1 && nachBody.replace(/<\/?html[^>]*>|\s/gi, "") !== "") {
+    befunde.push({
+      schwere: "fehler",
+      titel: "Text steht hinter </body>",
+      text: "Alles nach </body> gehört nicht mehr zum Inhalt. Browser räumen das auf, Mailprogramme nicht zuverlässig — der Text kann fehlen oder an falscher Stelle landen. Er gehört vor </body>.",
     });
   }
 

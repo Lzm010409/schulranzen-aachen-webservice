@@ -38,6 +38,7 @@ model User {
   auditLogs  AuditLog[]
   campaigns  Campaign[]
   exportLogs ExportLog[]
+  mailImages MailImage[]
 
   @@map("user")
 }
@@ -266,6 +267,31 @@ model MailTemplate {
 
   @@index([deletedAt])
   @@map("mail_template")
+}
+
+/// Bild, das in einer Vorlage oder Kampagne verwendet wird.
+///
+/// Mailprogramme zeigen eingebettete Bilder (`data:`-URI) nicht an — Gmail
+/// gar nicht, Outlook nur eingeschraenkt. Deshalb landen Bilder hier und
+/// stehen in der Mail als normale Adresse unter APP_URL/bilder/....
+model MailImage {
+  id String @id @default(cuid())
+  /// Pruefsumme des Inhalts; dasselbe Bild wird nur einmal gespeichert.
+  sha256   String @unique
+  mimeType String
+  /// Roh-Bytes. Wie bei den Anhaengen bewusst in der Datenbank, damit ein
+  /// Umzug der Anwendung keine verwaisten Dateien hinterlaesst.
+  data     Bytes
+  size     Int
+  /// Nur zur Anzeige in der Uebersicht; leer, wenn das Bild aus einer
+  /// eingefuegten Vorlage stammt.
+  filename String?
+
+  createdAt   DateTime @default(now())
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@map("mail_image")
 }
 
 model MailTemplateVersion {

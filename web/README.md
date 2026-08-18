@@ -80,6 +80,7 @@ in `src/lib/__tests__/vorlage-coocazoo.test.ts` festgehalten.
 | `standard-klassik.html` | Allzweck: roter Kopf, Fließtext, Öffnungszeiten, dunkle Fußzeile |
 | `standard-aktion.html` | Ranzenwochen, Sonderangebote, Events: großer Aufmacher, Bildfläche, die vier Argumente der Website |
 | `standard-brief.html` | Persönliche Nachrichten: Terminbestätigung, Erinnerung, Service — viel Weißraum, feine rote Linie |
+| `standard-bild.html` | Ein Motiv oben, Text darunter: Plakat, Herstellergrafik, Foto aus dem Laden — Bild verlinkt, mit Breite und Alternativtext |
 | `coocazoo-colour-up.html` | Aktionsmail zum Colour-Up-Event: grünes Kopfband, Titelblock, Bildfläche, roter Terminknopf, Ablauf in drei Schritten |
 
 Das Logo sitzt in allen Vorlagen im Kopf (die öffentliche Adresse des
@@ -87,18 +88,19 @@ Bildes von der Website); lädt es nicht, trägt die Wortmarke daneben.
 
 Vorlagen dürfen bis zu **5.000.000 Zeichen** lang sein — genug für
 eingebettete Bilder als `data:`-URI, die durch Base64 rund ein Drittel
-Aufschlag bekommen. Der Editor zeigt den Stand mit. Wo es geht, ist eine
-verlinkte Bilddatei unter `public/bilder/` trotzdem besser: Gmail und
-Outlook zeigen eingebettete Bilder oft gar nicht an.
+Aufschlag bekommen. Der Editor zeigt den Stand mit. Beim Speichern wandern
+solche Bilder in die [Bildablage](#bildablage) und stehen danach nur noch als
+Adresse in der Vorlage — Gmail zeigt eingebettete Bilder nicht an.
 
 Farben, Schriften und feste Angaben stammen aus der Website und stehen in
 [`vorlagen/_styleguide.md`](./vorlagen/_styleguide.md) — Markenrot `#D7232A`,
 Roboto, Trierer Straße 785. Alle Fußzeilen führen Impressum und
 Datenschutzerklärung, wie es geschäftliche Post in Deutschland verlangt.
 
-Bilder gehören nach `public/bilder/` und sind dann unter der eigenen Domain
-erreichbar. Fehlt ein Bild, bleibt die Fläche farbig stehen und der
-Alternativtext erscheint — die Mail sieht auch dann vollständig aus.
+Bilder kommen über „Bild einfügen" in die [Bildablage](#bildablage) und sind
+dann unter der eigenen Domain erreichbar. Fehlt ein Bild, bleibt die Fläche
+farbig stehen und der Alternativtext erscheint — die Mail sieht auch dann
+vollständig aus.
 
 So sieht eine Vorlage aus, bevor sie verschickt wird:
 
@@ -147,7 +149,8 @@ Word und kennt weder `overflow` noch zuverlässig `background` im style-Attribut
 `src/lib/mail-check.ts` prüft eine Vorlage darauf und zeigt die Befunde direkt
 im Editor, solange sich noch etwas ändern lässt:
 
-- **Fehler**: Nachricht über 102 KB · eingebettete Bilder · Schrift steht nur am `<body>`
+- **Fehler**: Nachricht über 102 KB · eingebettete Bilder · Text hinter `</body>` ·
+  Schrift steht nur am `<body>`
 - **Hinweis**: nahe an der Grenze · `<style>`-Block · `position`, `float`,
   `background-image`, negative Abstände · Bilder ohne `width` oder Alternativtext ·
   farbige Zellen ohne `bgcolor`
@@ -155,11 +158,29 @@ im Editor, solange sich noch etwas ändern lässt:
 Für die mitgelieferten Vorlagen ist die Prüfung Teil der Testsuite — eine
 Verschlechterung fällt damit auf, bevor jemand die Mail vor sich hat.
 
-> **Bilder gehören ins Netz, nicht in die Mail.** Ein Mailprogramm lädt Bilder
-> über ihre Adresse; es hat keinen Zugriff auf diese Anwendung. Solange für
-> `schulranzen.gollenstede.app` kein DNS-Eintrag existiert, lädt kein Bild von
-> dort — bei niemandem. Bis dahin Bilder auf der Website ablegen und deren
-> Adresse eintragen.
+### Bildablage
+
+Ein Bild, das als `data:`-URI im HTML steckt, kommt bei Gmail nicht an: Gmail
+zeigt solche Bilder nicht, und Base64 bläht die Nachricht so weit auf, dass
+Gmail sie ab etwa 102 KB abschneidet — samt Abmeldelink darunter.
+
+Deshalb nimmt die Anwendung eingebettete Bilder **beim Speichern** aus dem
+HTML heraus (`src/lib/mail-images.ts`), legt sie in `mail_image` ab und setzt
+an ihre Stelle die Adresse `APP_URL/bilder/<id>.<endung>`. Gleiche Bilder
+werden über ihre Prüfsumme erkannt und nur einmal gespeichert. Wer den Umweg
+gar nicht erst gehen will, nimmt im Editor **„Bild einfügen"** — die Datei
+landet direkt in der Ablage und im Text steht sofort ein `<img>` mit `width`
+und Alternativtext.
+
+`/bilder/…` ist bewusst ohne Anmeldung erreichbar: das Mailprogramm des
+Empfängers hat keine Sitzung. Die Kennung ist eine cuid, und ausgeliefert wird
+nur, was ohnehin in der versendeten Mail steht. Der Inhalt unter einer Adresse
+ändert sich nie, deshalb darf beliebig lange zwischengespeichert werden.
+
+> **Die Adresse muss von außen erreichbar sein.** Die Anwendung setzt
+> `APP_URL` vor den Pfad. Solange für `schulranzen.gollenstede.app` kein
+> DNS-Eintrag existiert, lädt kein Bild von dort — bei niemandem. Bis dahin
+> Bilder auf der Website ablegen und deren Adresse eintragen.
 
 ## Rückmeldung und Ladezustand
 
@@ -275,8 +296,9 @@ node scripts/import-check.mjs http://localhost:3000 legacy.dump  # 18 Prüfungen
 node scripts/pagination-check.mjs http://localhost:3000          # 24 Prüfungen
 node scripts/feedback-check.mjs http://localhost:3000            # 17 Prüfungen
 node scripts/auswahl-check.mjs http://localhost:3000             # 11 Prüfungen
+node scripts/bilder-check.mjs http://localhost:3000              # 13 Prüfungen
 node scripts/kategorie-check.mjs http://localhost:3000 \
-  postgresql://…/testdatenbank                                   # 16 Prüfungen
+  postgresql://…/testdatenbank                                   # 20 Prüfungen
 
 # Beispieldateien gegen ihre Beschreibung prüfen (leert dabei den Bestand,
 # deshalb nur gegen eine eigene Testdatenbank laufen lassen)
@@ -332,6 +354,7 @@ scripts/
   pagination-check.mjs    prüft, dass jede Tabelle seitenweise blättert
   feedback-check.mjs      prüft Rückmeldungen und Ladezustand
   auswahl-check.mjs       prüft, dass die Kundenauswahl das Blättern übersteht
+  bilder-check.mjs        prüft die Bildablage für Mails
   kategorie-check.mjs     prüft Warengruppen und Saison
   gross-check.mjs         Import mit 12.600 Zeilen am laufenden System
   vorlage-vorschau.ts     rendert eine Vorlage wie beim Versand

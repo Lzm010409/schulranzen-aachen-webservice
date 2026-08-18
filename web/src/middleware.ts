@@ -6,8 +6,17 @@ import { SESSION_COOKIE } from "@/lib/auth.shared";
  * Die eigentliche Pruefung passiert serverseitig in `requireUser()` —
  * die Middleware spart nur den Umweg ueber eine Seite, die ohnehin
  * umleiten wuerde.
+ *
+ * `/bilder` liefert die Bilder aus versendeten Mails aus — das Mailprogramm
+ * des Empfaengers hat keine Sitzung und muss ohne Anmeldung herankommen.
  */
-const PUBLIC_PREFIXES = ["/login", "/abmelden", "/api/health", "/_next"];
+const PUBLIC_PREFIXES = [
+  "/login",
+  "/abmelden",
+  "/bilder",
+  "/api/health",
+  "/_next",
+];
 
 /** Vom Framework erzeugte Metadaten-Dateien; sie duerfen nie umgeleitet werden. */
 const PUBLIC_FILES = new Set([

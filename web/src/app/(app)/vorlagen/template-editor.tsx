@@ -13,6 +13,7 @@ import {
 import { PLACEHOLDERS } from "@/lib/template";
 import { MAX_BODY_LENGTH, describeBodyLength } from "@/lib/validation";
 import { pruefeMailtauglichkeit } from "@/lib/mail-check";
+import { BildUpload } from "@/components/bild-upload";
 import { saveTemplateAction, type TemplateFormState } from "./actions";
 
 export type TemplateValues = {
@@ -164,6 +165,13 @@ export function TemplateEditor({
           </div>
 
           <div className="space-y-3">
+            <div className="rounded-md border border-slate-200 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Bild
+              </p>
+              <BildUpload onInsert={(html) => setBody((v) => `${v}\n${html}`)} />
+            </div>
+
             <div className="rounded-md border border-slate-200 p-3">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Platzhalter
