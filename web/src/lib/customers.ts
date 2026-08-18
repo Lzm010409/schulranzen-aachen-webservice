@@ -21,6 +21,27 @@ export async function findOrCreateProduct(
   return tx.product.create({ data: { name: name.trim(), slug } });
 }
 
+/**
+ * Legt eine Warengruppe an oder liefert die bestehende zurueck.
+ *
+ * Derselbe Duplikatschutz wie bei den Produkten: „Schulranzen“, „schulranzen“
+ * und „ Schulranzen “ sind eine Warengruppe, nicht drei. Wird beim Import
+ * gebraucht, damit eine Spalte „Warengruppe“ nicht bei jedem Lauf neue Eintraege
+ * erzeugt.
+ */
+export async function findOrCreateCategory(
+  name: string,
+  tx: Prisma.TransactionClient = db,
+) {
+  const slug = productSlug(name);
+  if (!slug) return null;
+
+  const existing = await tx.productCategory.findUnique({ where: { slug } });
+  if (existing) return existing;
+
+  return tx.productCategory.create({ data: { name: name.trim(), slug } });
+}
+
 export type DuplicateHit = {
   id: string;
   firstName: string;
@@ -116,7 +137,15 @@ export const customerListSelect = {
     select: {
       id: true,
       purchasedAt: true,
-      product: { select: { id: true, name: true } },
+      season: true,
+      product: {
+        select: {
+          id: true,
+          name: true,
+          modelYear: true,
+          category: { select: { id: true, name: true } },
+        },
+      },
     },
   },
 } satisfies Prisma.CustomerSelect;

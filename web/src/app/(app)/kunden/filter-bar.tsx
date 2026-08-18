@@ -14,10 +14,15 @@ import { saveSegmentAction, deleteSegmentAction } from "./actions";
 export function CustomerFilterBar({
   filter,
   products,
+  categories,
+  seasons,
   segments,
 }: {
   filter: CustomerFilter;
   products: { id: string; name: string }[];
+  categories: { id: string; name: string }[];
+  /** Jahrgänge, zu denen es tatsächlich Käufe gibt. */
+  seasons: number[];
   segments: { id: string; name: string; filter: Record<string, string> }[];
 }) {
   const router = useRouter();
@@ -95,6 +100,40 @@ export function CustomerFilterBar({
             {products.map((product) => (
               <option key={product.id} value={product.id}>
                 {product.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field label="Warengruppe" htmlFor="categoryId">
+          <Select
+            id="categoryId"
+            defaultValue={filter.categoryId}
+            onChange={(e) => update("categoryId", e.target.value)}
+          >
+            <option value="">alle</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field
+          label="Saison"
+          htmlFor="season"
+          hint="Einschulungsjahrgang des Kaufs"
+        >
+          <Select
+            id="season"
+            defaultValue={filter.season}
+            onChange={(e) => update("season", e.target.value)}
+          >
+            <option value="">alle</option>
+            {seasons.map((year) => (
+              <option key={year} value={year}>
+                {year}
               </option>
             ))}
           </Select>

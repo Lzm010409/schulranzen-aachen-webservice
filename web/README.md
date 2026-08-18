@@ -21,6 +21,8 @@ PostgreSQL 16 · Tailwind 4 · Nodemailer
 | Abmeldung | nicht vorhanden | signierter Abmeldelink + `List-Unsubscribe`-Header, Pflichtbestandteil jeder Mail |
 | Suche/Filter | Stichwort **oder** Zeitraum | alle Kriterien gleichzeitig, Filterstand steht in der URL |
 | Kunde ↔ Produkt | genau ein Produkt je Kunde | `Customer` + `Purchase`: mehrere Käufe je Kunde |
+| Warengruppe | nicht vorhanden | gepflegte Liste statt Freitext, Filter in Katalog und Kundenliste |
+| Saison | nicht vorhanden | Einschulungsjahrgang **am Kauf**, aus dem Kaufdatum abgeleitet |
 | Produkte | Freitext legte bei jedem Speichern ein Duplikat an | eindeutiger Schlüssel, Zusammenführen im UI |
 | Export | Temp-Datei, komplett in den Speicher, `,`-getrennt | Streaming, Excel-tauglich (`;` + BOM), CSV-Injection entschärft, XLSX |
 | Listen | alles auf einer Seite | jede Tabelle blättert seitenweise, Seitenzahl steht in der URL |
@@ -29,6 +31,40 @@ PostgreSQL 16 · Tailwind 4 · Nodemailer
 | Konfiguration | `file:/Users/lukegollenstede/Downloads/db.properties` | Umgebungsvariablen, beim Start validiert |
 
 ---
+
+## Warengruppen und Saison
+
+Zwei Angaben, die vorher als Freitext am Produkt hingen und nichts bewirkten:
+
+**Warengruppe** (früher „Kategorie") ist jetzt eine gepflegte Liste
+(`ProductCategory`) statt Freitext. Sonst stehen „Ranzen", „Schulranzen" und
+„schulranzen" nebeneinander — genau der Fehler, an dem im Altsystem schon die
+Produktnamen gescheitert sind. Gepflegt wird sie direkt am Katalog, nicht in
+einer eigenen Maske; es sind eine Handvoll Einträge.
+
+**Saison** hängt jetzt am **Kauf**, nicht am Produkt — der
+Einschulungsjahrgang des Kindes. Ein „Ergobag Cubo" wird über viele Jahre
+verkauft; ein einziges Saisonfeld am Produkt kann deshalb nur falsch sein. Der
+Jahrgang entsteht automatisch aus dem Kaufdatum:
+
+```
+Kauf im Januar–August       →  Einschulung im selben Jahr
+Kauf im September–Dezember  →  Einschulung im Folgejahr
+```
+
+Das ist eine Konvention (`src/lib/season.ts`), keine Naturkonstante — im
+Kundenformular lässt sich der Jahrgang je Kauf überschreiben, etwa wenn ein
+Kind ein Jahr später eingeschult wird. Das Produkt behält stattdessen ein
+sauberes **Modelljahr** für die Kollektion.
+
+Damit ist die Frage filterbar, um die es beim Rundbrief eigentlich geht:
+*wer hat vor vier Jahren einen Schulranzen gekauft?* — Kundenliste, Filter
+„Warengruppe" und „Saison". Beides steht auch im Export.
+
+Beide Importwege füllen die Felder: die CSV-/Excel-Datei über optionale
+Spalten *Warengruppe*, *Modelljahr* und *Saison*, die Übernahme aus dem
+Altsystem über das Kaufdatum — dort gab es die Angaben nicht, die Saison
+entsteht trotzdem rückwirkend für den gesamten Bestand.
 
 ## Rückmeldung und Ladezustand
 
@@ -119,7 +155,7 @@ openssl rand -base64 32       # für ENCRYPTION_KEY (muss genau 32 Byte sein)
 ## Tests
 
 ```bash
-npm test                      # 117 Tests: Normalisierung, Mailaufbau, Export,
+npm test                      # 129 Tests: Normalisierung, Mailaufbau, Export,
                               # SMTP-Fehler, Rechte, Import, Versandstrecke
 npm run typecheck
 
@@ -127,8 +163,13 @@ npm run typecheck
 node scripts/smoke.mjs http://localhost:3000              # 25 Prüfungen
 node scripts/permissions-check.mjs http://localhost:3000  # 16 Prüfungen
 node scripts/import-check.mjs http://localhost:3000 legacy.dump  # 18 Prüfungen
+# Die Browser-Prüfungen greifen auf denselben Auslieferungsstand zu, den der
+# Server geladen hat — nach einem `npm run build` den Server neu starten,
+# sonst passen Server- und Browser-Bundle nicht zusammen.
 node scripts/pagination-check.mjs http://localhost:3000          # 17 Prüfungen
 node scripts/feedback-check.mjs http://localhost:3000            # 17 Prüfungen
+node scripts/kategorie-check.mjs http://localhost:3000 \
+  postgresql://…/testdatenbank                                   # 16 Prüfungen
 
 # Beispieldateien gegen ihre Beschreibung prüfen (leert dabei den Bestand,
 # deshalb nur gegen eine eigene Testdatenbank laufen lassen)
@@ -161,6 +202,7 @@ src/
   lib/
     auth.ts           Sitzungen, Rechteprüfung, Rate-Limit
     flash.ts          zentrale Rückmeldung nach jeder Änderung
+    season.ts         Einschulungsjahrgang aus dem Kaufdatum
     permissions.ts    Rechtekatalog, Vorlagen, abhängige Rechte
     crypto.ts         Passwort-Hash (scrypt), AES-256-GCM
     queue.ts          Empfänger einreihen, Fortschritt, Wiederholung
@@ -180,6 +222,7 @@ scripts/
   beispieldaten-check.mjs prüft die Beispieldateien gegen ihre Beschreibung
   pagination-check.mjs    prüft, dass jede Tabelle seitenweise blättert
   feedback-check.mjs      prüft Rückmeldungen und Ladezustand
+  kategorie-check.mjs     prüft Warengruppen und Saison
   gross-check.mjs         Import mit 12.600 Zeilen am laufenden System
   etl/import.ts           Übernahme aus dem Altsystem (Kommandozeile)
 ```

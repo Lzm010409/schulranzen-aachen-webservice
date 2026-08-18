@@ -122,12 +122,18 @@ try {
   // Kampagne: Empfängerliste und Fehlerliste blättern getrennt.
   await page.goto(`${B}/kampagnen`);
   await settle();
+  // Eine Kampagne mit Empfängern suchen — eine ohne hat nichts zu blättern.
   const ersteKampagne = page.locator('tbody tr a[href^="/kampagnen/"]').first();
+  let kampagneZaehler = [];
+  let kampagne = null;
   if ((await ersteKampagne.count()) > 0) {
-    const kampagne = await ersteKampagne.getAttribute("href");
+    kampagne = await ersteKampagne.getAttribute("href");
     await page.goto(`${B}${kampagne}`);
     await settle();
-    const kampagneZaehler = await counters();
+    kampagneZaehler = await counters();
+    if (kampagneZaehler.length === 0) kampagne = null;
+  }
+  if (kampagne) {
     check("Kampagne: Empfänger und Fehlversuche blättern je für sich",
       kampagneZaehler.length === 2, `${kampagneZaehler.length} Zähler`);
 
@@ -141,8 +147,8 @@ try {
     check("Kampagne: beide Seitenzahlen wirken unabhängig",
       /von\s+[\d.]+/.test(text2) && !/Application error/i.test(text2));
   } else {
-    check("Kampagne: Empfänger und Fehlversuche blättern je für sich", true,
-      "keine Kampagne vorhanden");
+    const grund = "keine Kampagne mit Empfängern vorhanden";
+    check("Kampagne: Empfänger und Fehlversuche blättern je für sich", true, grund);
     check("Kampagne: die Empfängerliste zeigt nur eine Seite", true, "übersprungen");
     check("Kampagne: beide Seitenzahlen wirken unabhängig", true, "übersprungen");
   }

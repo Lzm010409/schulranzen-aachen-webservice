@@ -1,7 +1,7 @@
 import "server-only";
 import ExcelJS from "exceljs";
 import { db } from "../db";
-import { findOrCreateProduct } from "../customers";
+import { findOrCreateCategory, findOrCreateProduct } from "../customers";
 import {
   isValidEmail,
   normalizeEmail,
@@ -24,6 +24,7 @@ import {
   chunk,
   type ProgressReporter,
 } from "./batch";
+import { parseSeason, seasonOf } from "../season";
 
 /**
  * Allgemeiner Kundenimport aus CSV oder Excel.
@@ -52,7 +53,13 @@ export type PreparedRow = {
   phone: string | null;
   notes: string | null;
   product: string | null;
+  /** Warengruppe des Produkts, falls die Datei eine Spalte dafuer hat. */
+  category: string | null;
+  /** Modelljahr des Produkts. */
+  modelYear: number | null;
   purchasedAt: Date | null;
+  /** Einschulungsjahrgang: aus der Datei oder aus dem Kaufdatum. */
+  season: number | null;
   /** Auf welchen bestehenden Kunden diese Zeile trifft, falls einer passt. */
   matchesCustomerId: string | null;
 };
@@ -194,6 +201,23 @@ export async function prepareImport(
       });
     }
 
+    // Saison: was in der Datei steht, sonst aus dem Kaufdatum abgeleitet.
+    const rawSeason = cell(raw, mapping.season);
+    const season = parseSeason(rawSeason) ?? seasonOf(purchasedAt);
+    if (rawSeason && parseSeason(rawSeason) === null) {
+      issues.push({
+        row: rowNumber,
+        field: "Saison",
+        message: `„${rawSeason}“ ist kein Jahrgang — die Saison wird aus dem Kaufdatum abgeleitet.`,
+        severity: "hinweis",
+      });
+    }
+
+    const rawModelYear = cell(raw, mapping.modelYear);
+    const modelYear = /^\d{4}$/.test(rawModelYear)
+      ? Number(rawModelYear)
+      : null;
+
     rows.push({
       row: rowNumber,
       firstName: firstName || "—",
@@ -205,7 +229,10 @@ export async function prepareImport(
       phone: normalizePhone(cell(raw, mapping.phone)),
       notes: noteParts.length > 0 ? noteParts.join("\n") : null,
       product: normalizeName(cell(raw, mapping.product)) || null,
+      category: normalizeName(cell(raw, mapping.category)) || null,
+      modelYear,
       purchasedAt,
+      season,
       matchesCustomerId: null,
     });
   }
@@ -421,15 +448,31 @@ function mergeGroup(group: PreparedRow[]): CustomerWrite {
 async function resolveProducts(
   rows: PreparedRow[],
 ): Promise<{ idBySlug: Map<string, string>; created: number }> {
-  const nameBySlug = new Map<string, string>();
+  // Je Produkt merken, was die Datei ueber Warengruppe und Modelljahr sagt —
+  // der erste nicht-leere Wert gewinnt.
+  const bySlug = new Map<
+    string,
+    { name: string; category: string | null; modelYear: number | null }
+  >();
   for (const row of rows) {
     if (!row.product) continue;
     const slug = productSlug(row.product);
-    if (slug && !nameBySlug.has(slug)) nameBySlug.set(slug, row.product);
+    if (!slug) continue;
+    const entry = bySlug.get(slug);
+    if (entry) {
+      entry.category ??= row.category;
+      entry.modelYear ??= row.modelYear;
+    } else {
+      bySlug.set(slug, {
+        name: row.product,
+        category: row.category,
+        modelYear: row.modelYear,
+      });
+    }
   }
 
   const idBySlug = new Map<string, string>();
-  const slugs = [...nameBySlug.keys()];
+  const slugs = [...bySlug.keys()];
 
   for (const part of chunk(slugs, LOOKUP_CHUNK)) {
     const found = await db.product.findMany({
@@ -440,9 +483,34 @@ async function resolveProducts(
   }
 
   let created = 0;
-  for (const [slug, name] of nameBySlug) {
-    if (idBySlug.has(slug)) continue;
-    const product = await findOrCreateProduct(name);
+  for (const [slug, entry] of bySlug) {
+    const categoryId = entry.category
+      ? (await findOrCreateCategory(entry.category))?.id ?? null
+      : null;
+
+    const known = idBySlug.get(slug);
+    if (known) {
+      // Vorhandene Produkte nur ergaenzen, nie leerraeumen: die Datei kennt
+      // die Warengruppe womoeglich nicht, die Anwendung schon.
+      if (categoryId || entry.modelYear !== null) {
+        await db.product.update({
+          where: { id: known },
+          data: {
+            ...(categoryId ? { categoryId } : {}),
+            ...(entry.modelYear !== null ? { modelYear: entry.modelYear } : {}),
+          },
+        });
+      }
+      continue;
+    }
+
+    const product = await findOrCreateProduct(entry.name);
+    if (categoryId || entry.modelYear !== null) {
+      await db.product.update({
+        where: { id: product.id },
+        data: { categoryId, modelYear: entry.modelYear },
+      });
+    }
     idBySlug.set(slug, product.id);
     created += 1;
   }
@@ -513,6 +581,7 @@ async function writeBatch(
         customerId: string;
         productId: string;
         purchasedAt: Date | null;
+        season: number | null;
       }[] = [];
 
       for (const entry of batch) {
@@ -522,7 +591,12 @@ async function writeBatch(
           if (!row.product) continue;
           const productId = productIdBySlug.get(productSlug(row.product));
           if (!productId) continue;
-          wanted.push({ customerId, productId, purchasedAt: row.purchasedAt });
+          wanted.push({
+            customerId,
+            productId,
+            purchasedAt: row.purchasedAt,
+            season: row.season,
+          });
         }
       }
 

@@ -14,6 +14,10 @@ export const customerFilterSchema = z.object({
   from: z.string().optional().default(""),
   to: z.string().optional().default(""),
   productId: z.string().optional().default(""),
+  /** Warengruppe des gekauften Produkts. */
+  categoryId: z.string().optional().default(""),
+  /** Einschulungsjahrgang des Kaufs, etwa "2021". */
+  season: z.string().trim().max(4).optional().default(""),
   city: z.string().trim().max(100).optional().default(""),
   zip: z.string().trim().max(10).optional().default(""),
   /** "yes" nur Abgemeldete, "no" nur Kontaktierbare, "" egal. */
@@ -78,11 +82,16 @@ export function buildWhere(filter: CustomerFilter): Prisma.CustomerWhereInput {
 
   const from = parseDate(filter.from);
   const to = parseDate(filter.to);
-  if (from || to || filter.productId) {
-    // Zeitraum und Produkt muessen auf denselben Kauf zutreffen, nicht auf
-    // zwei verschiedene.
+  const season = Number(filter.season);
+  const hasSeason = filter.season !== "" && Number.isInteger(season);
+
+  if (from || to || filter.productId || filter.categoryId || hasSeason) {
+    // Zeitraum, Produkt, Warengruppe und Saison muessen auf denselben Kauf
+    // zutreffen, nicht auf zwei verschiedene.
     const purchase: Prisma.PurchaseWhereInput = {};
     if (filter.productId) purchase.productId = filter.productId;
+    if (filter.categoryId) purchase.product = { categoryId: filter.categoryId };
+    if (hasSeason) purchase.season = season;
     if (from || to) {
       purchase.purchasedAt = {
         ...(from ? { gte: from } : {}),
@@ -127,10 +136,14 @@ export function isEmptyFilter(filter: CustomerFilter): boolean {
 export function describeFilter(
   filter: CustomerFilter,
   productName?: string,
+  categoryName?: string,
 ): string {
   const parts: string[] = [];
   if (filter.q) parts.push(`Stichwort "${filter.q}"`);
   if (filter.productId) parts.push(`Produkt ${productName ?? filter.productId}`);
+  if (filter.categoryId)
+    parts.push(`Warengruppe ${categoryName ?? filter.categoryId}`);
+  if (filter.season) parts.push(`Saison ${filter.season}`);
   if (filter.from) parts.push(`ab ${filter.from}`);
   if (filter.to) parts.push(`bis ${filter.to}`);
   if (filter.city) parts.push(`Stadt ${filter.city}`);

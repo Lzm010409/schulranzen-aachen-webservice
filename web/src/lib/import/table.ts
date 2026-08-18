@@ -157,6 +157,31 @@ export const IMPORT_FIELDS = [
     aliases: ["kaufdatum", "kaufdaten", "datum", "date", "gekauft am", "kauf"],
   },
   {
+    key: "season",
+    label: "Saison",
+    required: false,
+    aliases: [
+      "saison",
+      "season",
+      "jahrgang",
+      "einschulung",
+      "einschulungsjahr",
+      "schuljahr",
+    ],
+  },
+  {
+    key: "category",
+    label: "Warengruppe",
+    required: false,
+    aliases: ["warengruppe", "kategorie", "category", "gruppe", "sparte"],
+  },
+  {
+    key: "modelYear",
+    label: "Modelljahr",
+    required: false,
+    aliases: ["modelljahr", "kollektion", "modell", "model year"],
+  },
+  {
     key: "notes",
     label: "Notiz",
     required: false,

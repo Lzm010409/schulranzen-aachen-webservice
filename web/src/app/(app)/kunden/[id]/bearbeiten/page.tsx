@@ -56,6 +56,7 @@ export default async function EditCustomerPage({
             id: purchase.id,
             productName: purchase.product.name,
             date: toDateInput(purchase.purchasedAt),
+            season: purchase.season?.toString() ?? "",
           })),
         }}
       />

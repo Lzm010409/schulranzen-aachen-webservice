@@ -20,7 +20,10 @@ function row(partial: Partial<Row>): Row {
     phone: null,
     notes: null,
     product: null,
+    category: null,
+    modelYear: null,
     purchasedAt: null,
+    season: null,
     matchesCustomerId: null,
     ...partial,
   };

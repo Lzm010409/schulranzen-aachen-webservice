@@ -71,14 +71,46 @@ model LoginAttempt {
 
 // ---------------------------------------------------------------- Stammdaten
 
+/// Warengruppe eines Produkts — Ranzen, Zubehoer, Sporttasche.
+///
+/// Als eigene Tabelle statt als Freitext: sonst stehen "Schulranzen",
+/// "schulranzen" und "Ranzen" als drei Werte nebeneinander, genau wie es bei
+/// den Produktnamen im Altsystem passiert ist. Als Tabelle statt als
+/// Aufzaehlung im Code, damit sich das Sortiment ohne Deployment aendern
+/// laesst.
+model ProductCategory {
+  id   String @id @default(cuid())
+  name String
+  /// Normalisiert; haelt Schreibweisen zusammen.
+  slug String @unique
+  /// Reihenfolge in Auswahllisten; gleiche Werte werden nach Namen sortiert.
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@index([active])
+  @@map("product_category")
+}
+
 model Product {
   id     String  @id @default(cuid())
   /// Anzeigename, so wie der Nutzer ihn eingibt.
   name   String
   /// Kleingeschrieben und normalisiert — verhindert "Ranzen XY" vs. "ranzen xy".
   slug   String  @unique
-  category String?
-  season   String?
+
+  categoryId String?
+  category   ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  /// Modelljahr der Kollektion, etwa 2026. Loest das fruehere Freitextfeld
+  /// "season" ab: das vermischte das Modelljahr des Artikels mit dem
+  /// Einschulungsjahrgang des Kindes. Der Jahrgang haengt jetzt am Kauf.
+  modelYear Int?
+
   active   Boolean @default(true)
 
   legacyId  BigInt?  @unique
@@ -88,6 +120,7 @@ model Product {
   purchases Purchase[]
 
   @@index([active])
+  @@index([categoryId])
   @@map("product")
 }
 
@@ -133,6 +166,12 @@ model Purchase {
   productId   String
   product     Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
   purchasedAt DateTime? @db.Date
+
+  /// Einschulungsjahrgang: aus dem Kaufdatum abgeleitet (siehe lib/season.ts),
+  /// von Hand korrigierbar. Hier steht die Frage, die den Rundbrief ausloest —
+  /// wer vor vier Jahren gekauft hat, braucht bald einen neuen Ranzen.
+  season Int?
+
   note        String?
 
   legacyId  BigInt?  @unique
@@ -142,6 +181,7 @@ model Purchase {
   @@index([customerId])
   @@index([productId])
   @@index([purchasedAt])
+  @@index([season])
   @@map("purchase")
 }
 

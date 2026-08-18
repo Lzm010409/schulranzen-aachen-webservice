@@ -2,27 +2,34 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { ActionForm } from "@/components/action-form";
-import { Alert, Button, Field, Input } from "@/components/ui";
+import { Alert, Button, Field, Input, Select } from "@/components/ui";
 import { saveProductAction, type ProductFormState } from "./actions";
 
 type ProductValues = {
   id: string;
   name: string;
-  category: string;
-  season: string;
+  categoryId: string;
+  modelYear: string;
   active: boolean;
 };
 
+export type CategoryChoice = { id: string; name: string };
+
 export function ProductEditor({
   product,
+  categories,
   trigger,
   variant = "tertiary",
 }: {
   product: ProductValues | null;
+  categories: CategoryChoice[];
   trigger: string;
   variant?: "tertiary" | "primary";
 }) {
   const [open, setOpen] = useState(false);
+  // Eine neue Warengruppe soll sich anlegen lassen, ohne die Maske zu
+  // verlassen — sonst tippt am Ende doch wieder jeder seine eigene.
+  const [neueGruppe, setNeueGruppe] = useState(false);
   const [state, formAction] = useActionState<ProductFormState, FormData>(
     saveProductAction,
     {},
@@ -67,19 +74,50 @@ export function ProductEditor({
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Kategorie" htmlFor="category">
-              <Input
-                id="category"
-                name="category"
-                defaultValue={product?.category ?? ""}
-                placeholder="z. B. Ranzen"
-              />
+            <Field label="Warengruppe" htmlFor="categoryId">
+              {neueGruppe ? (
+                <Input
+                  id="newCategory"
+                  name="newCategory"
+                  placeholder="z. B. Schulranzen"
+                  autoFocus
+                />
+              ) : (
+                <Select
+                  id="categoryId"
+                  name="categoryId"
+                  defaultValue={product?.categoryId ?? ""}
+                >
+                  <option value="">— keine —</option>
+                  {categories.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name}
+                    </option>
+                  ))}
+                </Select>
+              )}
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => setNeueGruppe((offen) => !offen)}
+              >
+                {neueGruppe ? "aus der Liste wählen" : "neue Warengruppe"}
+              </button>
             </Field>
-            <Field label="Saison" htmlFor="season">
+
+            <Field
+              label="Modelljahr"
+              htmlFor="modelYear"
+              error={state.errors?.modelYear}
+              hint="Kollektion des Artikels, nicht der Einschulungsjahrgang."
+            >
               <Input
-                id="season"
-                name="season"
-                defaultValue={product?.season ?? ""}
+                id="modelYear"
+                name="modelYear"
+                type="number"
+                min={1990}
+                max={2100}
+                defaultValue={product?.modelYear ?? ""}
                 placeholder="z. B. 2026"
               />
             </Field>

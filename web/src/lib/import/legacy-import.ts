@@ -272,6 +272,7 @@ async function writeCustomerBatch(
         customerId: string;
         productId: string;
         purchasedAt: Date | null;
+        season: number | null;
       }[] = [];
 
       for (const customer of batch) {
@@ -288,6 +289,7 @@ async function writeCustomerBatch(
             customerId,
             productId,
             purchasedAt: purchase.purchasedAt,
+            season: purchase.season,
           });
         }
       }
@@ -320,6 +322,7 @@ async function writeCustomerBatch(
             customerId: purchase.customerId,
             productId: purchase.productId,
             purchasedAt: purchase.purchasedAt,
+            season: purchase.season,
           },
         });
       }

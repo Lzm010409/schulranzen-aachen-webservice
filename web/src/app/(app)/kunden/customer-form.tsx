@@ -22,7 +22,12 @@ export type CustomerFormValues = {
   email: string;
   phone: string;
   notes: string;
-  purchases: { id: string | null; productName: string; date: string }[];
+  purchases: {
+    id: string | null;
+    productName: string;
+    date: string;
+    season: string;
+  }[];
 };
 
 export function CustomerForm({
@@ -41,7 +46,7 @@ export function CustomerForm({
   const [purchases, setPurchases] = useState(
     values.purchases.length > 0
       ? values.purchases
-      : [{ id: null, productName: "", date: "" }],
+      : [{ id: null, productName: "", date: "", season: "" }],
   );
 
   const errors = state.errors ?? {};
@@ -200,13 +205,29 @@ export function CustomerForm({
                   defaultValue={purchase.date}
                 />
               </Field>
+              <Field
+                label="Saison"
+                htmlFor={`purchaseSeason-${index}`}
+                hint="leer = aus dem Kaufdatum"
+              >
+                <Input
+                  id={`purchaseSeason-${index}`}
+                  name="purchaseSeason"
+                  type="number"
+                  min={1990}
+                  max={2100}
+                  className="w-28"
+                  defaultValue={purchase.season}
+                  placeholder="Jahrgang"
+                />
+              </Field>
               <Button
                 type="button"
                 variant="tertiary"
                 onClick={() =>
                   setPurchases((rows) =>
                     rows.length === 1
-                      ? [{ id: null, productName: "", date: "" }]
+                      ? [{ id: null, productName: "", date: "", season: "" }]
                       : rows.filter((_, i) => i !== index),
                   )
                 }
@@ -223,7 +244,7 @@ export function CustomerForm({
           onClick={() =>
             setPurchases((rows) => [
               ...rows,
-              { id: null, productName: "", date: "" },
+              { id: null, productName: "", date: "", season: "" },
             ])
           }
         >

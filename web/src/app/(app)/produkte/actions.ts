@@ -4,12 +4,13 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
-import { mergeProducts } from "@/lib/customers";
+import { findOrCreateCategory, mergeProducts } from "@/lib/customers";
 import { productSlug } from "@/lib/normalize";
-import { fieldErrors, productSchema } from "@/lib/validation";
+import { categorySchema, fieldErrors, productSchema } from "@/lib/validation";
 import { flash } from "@/lib/flash";
 
 export type ProductFormState = { errors?: Record<string, string>; message?: string };
+export type CategoryFormState = { errors?: Record<string, string>; message?: string };
 
 export async function saveProductAction(
   _prev: ProductFormState,
@@ -20,8 +21,9 @@ export async function saveProductAction(
 
   const parsed = productSchema.safeParse({
     name: formData.get("name") ?? "",
-    category: formData.get("category") ?? "",
-    season: formData.get("season") ?? "",
+    categoryId: formData.get("categoryId") ?? "",
+    newCategory: formData.get("newCategory") ?? "",
+    modelYear: formData.get("modelYear") ?? "",
     active: formData.get("active") === "on",
   });
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
@@ -36,7 +38,19 @@ export async function saveProductAction(
     };
   }
 
-  const data = { ...parsed.data, slug };
+  // Eine frisch eingetippte Warengruppe sticht die Auswahl aus der Liste.
+  const created = parsed.data.newCategory
+    ? await findOrCreateCategory(parsed.data.newCategory)
+    : null;
+
+  const data = {
+    name: parsed.data.name,
+    slug,
+    categoryId: created?.id ?? parsed.data.categoryId,
+    modelYear: parsed.data.modelYear,
+    active: parsed.data.active,
+  };
+
   const product = id
     ? await db.product.update({ where: { id }, data })
     : await db.product.create({ data });
@@ -120,4 +134,61 @@ export async function mergeProductsAction(formData: FormData): Promise<void> {
     `${moved} Käufe gehören jetzt zu „${target?.name ?? "dem Ziel"}“.`,
   );
   revalidatePath("/produkte");
+}
+
+// ----------------------------------------------------------- Warengruppen
+
+/**
+ * Legt eine Warengruppe an oder aendert sie.
+ *
+ * Umbenennen aendert den Schluessel mit, nicht den Datensatz: wer
+ * „Schulranzen“ in „Schulranzen & Rucksäcke“ umbenennt, behaelt dieselbe
+ * Warengruppe — die Produkte haengen an der ID und wandern mit.
+ */
+export async function saveCategoryAction(
+  _prev: CategoryFormState,
+  formData: FormData,
+): Promise<CategoryFormState> {
+  const user = await requirePermission("produkte.verwalten");
+  const id = String(formData.get("id") ?? "");
+
+  const parsed = categorySchema.safeParse({
+    name: formData.get("name") ?? "",
+    sortOrder: formData.get("sortOrder") ?? 0,
+    active: formData.get("active") === "on" || !id,
+  });
+  if (!parsed.success) return { errors: fieldErrors(parsed.error) };
+
+  const slug = productSlug(parsed.data.name);
+  if (!slug) {
+    return { errors: { name: "Bitte einen Namen angeben." } };
+  }
+
+  const clash = await db.productCategory.findUnique({ where: { slug } });
+  if (clash && clash.id !== id) {
+    return {
+      errors: {
+        name: `„${clash.name}“ gibt es bereits. Bitte den vorhandenen Eintrag verwenden.`,
+      },
+    };
+  }
+
+  const data = { ...parsed.data, slug };
+  const category = id
+    ? await db.productCategory.update({ where: { id }, data })
+    : await db.productCategory.create({ data });
+
+  await recordAudit({
+    userId: user.id,
+    entity: "Product",
+    entityId: category.id,
+    action: id ? "UPDATE" : "CREATE",
+    diff: { warengruppe: data.name, reihenfolge: data.sortOrder, aktiv: data.active },
+  });
+
+  if (id) await flash.gespeichert("Warengruppe", category.name);
+  else await flash.angelegt("Warengruppe", category.name);
+
+  revalidatePath("/produkte");
+  return { message: "gespeichert" };
 }

@@ -6,6 +6,7 @@ import {
   normalizeZip,
   productSlug,
 } from "../normalize";
+import { seasonOf } from "../season";
 import type { LegacyData, LegacyKunde } from "./read-legacy";
 
 /**
@@ -24,6 +25,8 @@ export type PlannedPurchase = {
   legacyKundeId: bigint;
   productSlug: string | null;
   purchasedAt: Date | null;
+  /** Einschulungsjahrgang, aus dem Kaufdatum abgeleitet (siehe lib/season.ts). */
+  season: number | null;
 };
 
 export type PlannedCustomer = {
@@ -257,6 +260,7 @@ export function transform(data: LegacyData): TransformResult {
           legacyKundeId: kunde.id,
           productSlug: slug,
           purchasedAt: kunde.kaufdatum,
+          season: seasonOf(kunde.kaufdatum),
         });
       }
       issues.push({
@@ -270,6 +274,7 @@ export function transform(data: LegacyData): TransformResult {
           legacyKundeId: kunde.id,
           productSlug: slug,
           purchasedAt: kunde.kaufdatum,
+          season: seasonOf(kunde.kaufdatum),
         });
       }
       customersOut.push(candidate);

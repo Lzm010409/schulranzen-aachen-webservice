@@ -70,8 +70,32 @@ export const purchaseSchema = z.object({
 
 export const productSchema = z.object({
   name: requiredText("Produktname", 150),
-  category: optionalText(100),
-  season: optionalText(50),
+  /** Leer heisst „keine Warengruppe“. */
+  categoryId: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .transform((v) => v || null),
+  /** Neue Warengruppe, wenn im Formular eine eingetippt wurde. */
+  newCategory: optionalText(100),
+  /** Modelljahr der Kollektion. Leer bleibt leer. */
+  modelYear: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .transform((v) => (v ? Number(v) : null))
+    .refine(
+      (v) => v === null || (Number.isInteger(v) && v >= 1990 && v <= 2100),
+      { message: "Bitte ein Jahr zwischen 1990 und 2100 angeben." },
+    ),
+  active: z.coerce.boolean().default(true),
+});
+
+export const categorySchema = z.object({
+  name: requiredText("Name", 100),
+  sortOrder: z.coerce.number().int().min(0).max(999).default(0),
   active: z.coerce.boolean().default(true),
 });
 

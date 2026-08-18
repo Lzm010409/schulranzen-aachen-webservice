@@ -10,6 +10,7 @@ import { customerSchema } from "@/lib/validation";
 import { fieldErrors } from "@/lib/validation";
 import { customerFilterSchema } from "@/lib/customer-filter";
 import { flash } from "@/lib/flash";
+import { parseSeason, seasonOf } from "@/lib/season";
 
 export type CustomerFormState = {
   errors?: Record<string, string>;
@@ -35,12 +36,14 @@ function readPurchases(formData: FormData) {
   const names = formData.getAll("purchaseProduct").map(String);
   const dates = formData.getAll("purchaseDate").map(String);
   const ids = formData.getAll("purchaseId").map(String);
+  const seasons = formData.getAll("purchaseSeason").map(String);
 
   return names
     .map((name, index) => ({
       id: ids[index] || null,
       name: name.trim(),
       date: dates[index] || "",
+      season: seasons[index] || "",
     }))
     .filter((row) => row.name.length > 0);
 }
@@ -92,16 +95,25 @@ export async function saveCustomerAction(
     for (const row of purchases) {
       const product = await findOrCreateProduct(row.name, tx);
       const purchasedAt = row.date ? new Date(row.date) : null;
+      // Eine von Hand eingetragene Saison sticht die Ableitung aus dem Datum —
+      // manche Kinder werden ein Jahr spaeter eingeschult als der Kauf vermuten
+      // laesst.
+      const season = parseSeason(row.season) ?? seasonOf(purchasedAt);
 
       if (row.id) {
         const updated = await tx.purchase.update({
           where: { id: row.id },
-          data: { productId: product.id, purchasedAt },
+          data: { productId: product.id, purchasedAt, season },
         });
         keptIds.push(updated.id);
       } else {
         const created = await tx.purchase.create({
-          data: { customerId: customer.id, productId: product.id, purchasedAt },
+          data: {
+            customerId: customer.id,
+            productId: product.id,
+            purchasedAt,
+            season,
+          },
         });
         keptIds.push(created.id);
       }

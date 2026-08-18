@@ -39,6 +39,26 @@ const COLUMNS: ExportColumn<CustomerListRow>[] = [
     width: 24,
   },
   {
+    header: "Warengruppen",
+    value: (c) =>
+      [
+        ...new Set(
+          c.purchases
+            .map((p) => p.product.category?.name)
+            .filter((name): name is string => Boolean(name)),
+        ),
+      ].join(" | "),
+    width: 22,
+  },
+  {
+    // Der Einschulungsjahrgang ist die Zahl, nach der die Zielgruppen für den
+    // nächsten Rundbrief geschnitten werden — er gehört in den Export.
+    header: "Saison",
+    value: (c) =>
+      [...new Set(c.purchases.map((p) => p.season).filter(Boolean))].join(" | "),
+    width: 14,
+  },
+  {
     header: "Newsletter",
     value: (c) => (c.unsubscribedAt ? "abgemeldet" : "aktiv"),
     width: 14,

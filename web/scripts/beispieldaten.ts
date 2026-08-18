@@ -27,22 +27,23 @@ const STANDARD_HEADER = [
   "E-Mail",
   "Telefon",
   "Produkt",
+  "Warengruppe",
   "Kaufdatum",
 ];
 
 const STANDARD_ROWS = [
-  ["Anna", "Berger", "Pontstraße 14", "52062", "Aachen", "anna.berger@example.de", "0241 4011234", "Ergobag Cubo", "18.07.2023"],
-  ["Anna", "Berger", "Pontstraße 14", "52062", "Aachen", "anna.berger@example.de", "0241 4011234", "Sporttasche Größe M", "02.08.2025"],
-  ["Bernd", "Claßen", "Markt 8", "52062", "Aachen", "b.classen@example.de", "+49 241 4022345", "Satch Pack", "05.08.2024"],
-  ["Christina", "Dahmen", "Adalbertsteinweg 92", "52070", "Aachen", "c.dahmen@example.de", "", "Scout Sunny", "11.08.2022"],
-  ["Christina", "Dahmen", "Adalbertsteinweg 92", "52070", "Aachen", "c.dahmen@example.de", "", "Federmäppchen Set", "11.08.2022"],
-  ["Dennis", "Esser", "Vaalser Straße 5", "52074", "Aachen", "d.esser@example.de", "0241 4033456", "Step by Step Space", "22.07.2024"],
-  ["Elena", "Franzen", "Jülicher Straße 41", "52070", "Aachen", "e.franzen@example.de", "0241 4044567", "Satch Pack", "14.08.2025"],
-  ["Greta", "Hansen", "Hauptstraße 27", "52134", "Herzogenrath", "g.hansen@example.de", "02406 991234", "Ergobag Cubo", "01.08.2024"],
-  ["Hendrik", "Ibrahim", "Kirchstraße 12", "52249", "Eschweiler", "h.ibrahim@example.de", "02403 771234", "Step by Step Space", "08.08.2025"],
-  ["Ines", "Jansen", "Roermonder Straße 60", "52072", "Aachen", "i.jansen@example.de", "0241 4066789", "Sporttasche Größe M", "03.09.2021"],
-  ["Jonas", "Königs", "Alsdorfer Straße 9", "52477", "Alsdorf", "j.koenigs@example.de", "", "", ""],
-  ["Katrin", "Lemmens", "Trierer Straße 118", "52078", "Aachen", "k.lemmens@example.de", "0241 4077890", "Scout Sunny", "19.08.2023"],
+  ["Anna", "Berger", "Pontstraße 14", "52062", "Aachen", "anna.berger@example.de", "0241 4011234", "Ergobag Cubo", "Schulranzen", "18.07.2023"],
+  ["Anna", "Berger", "Pontstraße 14", "52062", "Aachen", "anna.berger@example.de", "0241 4011234", "Sporttasche Größe M", "Zubehör", "02.08.2025"],
+  ["Bernd", "Claßen", "Markt 8", "52062", "Aachen", "b.classen@example.de", "+49 241 4022345", "Satch Pack", "Schulranzen", "05.08.2024"],
+  ["Christina", "Dahmen", "Adalbertsteinweg 92", "52070", "Aachen", "c.dahmen@example.de", "", "Scout Sunny", "Schulranzen", "11.08.2022"],
+  ["Christina", "Dahmen", "Adalbertsteinweg 92", "52070", "Aachen", "c.dahmen@example.de", "", "Federmäppchen Set", "Zubehör", "11.08.2022"],
+  ["Dennis", "Esser", "Vaalser Straße 5", "52074", "Aachen", "d.esser@example.de", "0241 4033456", "Step by Step Space", "Schulranzen", "22.07.2024"],
+  ["Elena", "Franzen", "Jülicher Straße 41", "52070", "Aachen", "e.franzen@example.de", "0241 4044567", "Satch Pack", "Schulranzen", "14.08.2025"],
+  ["Greta", "Hansen", "Hauptstraße 27", "52134", "Herzogenrath", "g.hansen@example.de", "02406 991234", "Ergobag Cubo", "Schulranzen", "01.08.2024"],
+  ["Hendrik", "Ibrahim", "Kirchstraße 12", "52249", "Eschweiler", "h.ibrahim@example.de", "02403 771234", "Step by Step Space", "Schulranzen", "08.08.2025"],
+  ["Ines", "Jansen", "Roermonder Straße 60", "52072", "Aachen", "i.jansen@example.de", "0241 4066789", "Sporttasche Größe M", "Zubehör", "03.09.2021"],
+  ["Jonas", "Königs", "Alsdorfer Straße 9", "52477", "Alsdorf", "j.koenigs@example.de", "", "", "", ""],
+  ["Katrin", "Lemmens", "Trierer Straße 118", "52078", "Aachen", "k.lemmens@example.de", "0241 4077890", "Scout Sunny", "Schulranzen", "19.08.2023"],
 ];
 
 function csvCell(value: string, separator: string): string {
@@ -207,6 +208,11 @@ Erzeugt mit \`npm run beispieldaten\`.
 drin — daraus werden **zwei Kunden mit je zwei Käufen**, nicht vier Kunden.
 Jonas Königs hat kein Produkt und kein Kaufdatum: ein Interessent ohne Kauf.
 
+Die Spalte **Warengruppe** wird beim Import mit angelegt; Käufe bekommen ihre
+**Saison** (Einschulungsjahrgang) automatisch aus dem Kaufdatum. Ein Kauf im
+September oder später zählt zur Einschulung des Folgejahres — deshalb landet
+Ines Jansen mit dem 03.09.2021 in der Saison 2022.
+
 ## kunden-problemfaelle.csv
 
 Deckt die Fälle ab, an denen ein Import sonst stolpert:
@@ -237,6 +243,7 @@ Neun Zeilen im alten Modell „ein Kunde hat genau ein Produkt“. Daraus werden
 - Zeile 17 hat keinen Namen und wird ausgelassen
 - Produkt 1, 4 und 5 sind Schreibvarianten desselben Artikels und fallen
   zu einem Produkt zusammen
+- die Saison wird aus dem Kaufdatum abgeleitet; das Altsystem kannte sie nicht
 
 Der Abzug ist bewusst vollqualifiziert (\`public.kunde\`), damit sich prüfen
 lässt, dass der Import ihn in das Schema \`legacy\` umlenkt und die Tabellen

@@ -14,6 +14,8 @@ import { Pagination } from "@/components/pagination";
 import { deleteProductAction } from "./actions";
 import { ProductEditor } from "./product-editor";
 import { MergeForm } from "./merge-form";
+import { CategoryManager } from "./category-manager";
+import { CategoryFilter } from "./category-filter";
 
 export const metadata = { title: "Produkte" };
 export const dynamic = "force-dynamic";
@@ -30,11 +32,19 @@ export default async function ProductsPage({
   const params = await searchParams;
   const page = Math.max(1, Number(params.seite ?? 1) || 1);
 
-  const [total, products, mergeChoices] = await Promise.all([
-    db.product.count(),
+  // Nach Warengruppe filtern — die häufigste Frage am Katalog.
+  const categoryId = typeof params.gruppe === "string" ? params.gruppe : "";
+  const where = categoryId ? { categoryId } : {};
+
+  const [total, products, mergeChoices, categories] = await Promise.all([
+    db.product.count({ where }),
     db.product.findMany({
+      where,
       orderBy: [{ active: "desc" }, { name: "asc" }],
-      include: { _count: { select: { purchases: true } } },
+      include: {
+        _count: { select: { purchases: true } },
+        category: { select: { id: true, name: true } },
+      },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
@@ -48,12 +58,25 @@ export default async function ProductsPage({
         _count: { select: { purchases: true } },
       },
     }),
+    // Auch inaktive zeigen: sie stehen noch an Produkten und sollen sich
+    // wieder aktivieren lassen.
+    db.productCategory.findMany({
+      orderBy: [{ active: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        sortOrder: true,
+        active: true,
+        _count: { select: { products: true } },
+      },
+    }),
   ]);
 
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
         description={`${total.toLocaleString("de-DE")} Produkte · Der Katalog hinter den Käufen. Gleiche Namen werden über einen normalisierten Schlüssel zusammengehalten.`}
+        actions={<CategoryFilter categories={categories} />}
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -69,8 +92,8 @@ export default async function ProductsPage({
                 <thead>
                   <tr>
                     <Th>Name</Th>
-                    <Th>Kategorie</Th>
-                    <Th>Saison</Th>
+                    <Th>Warengruppe</Th>
+                    <Th>Modelljahr</Th>
                     <Th className="text-right">Käufe</Th>
                     <Th>Status</Th>
                     <Th />
@@ -88,9 +111,11 @@ export default async function ProductsPage({
                         </span>
                       </Td>
                       <Td className="text-slate-600">
-                        {product.category ?? "—"}
+                        {product.category?.name ?? "—"}
                       </Td>
-                      <Td className="text-slate-600">{product.season ?? "—"}</Td>
+                      <Td className="tabular-nums text-slate-600">
+                        {product.modelYear ?? "—"}
+                      </Td>
                       <Td className="text-right tabular-nums">
                         <a
                           href={`/kunden?productId=${product.id}`}
@@ -111,11 +136,12 @@ export default async function ProductsPage({
                         <div className="flex justify-end gap-1">
                           <ProductEditor
                             trigger="Bearbeiten"
+                            categories={categories}
                             product={{
                               id: product.id,
                               name: product.name,
-                              category: product.category ?? "",
-                              season: product.season ?? "",
+                              categoryId: product.categoryId ?? "",
+                              modelYear: product.modelYear?.toString() ?? "",
                               active: product.active,
                             }}
                           />
@@ -156,6 +182,22 @@ export default async function ProductsPage({
               trigger="Produkt anlegen"
               variant="primary"
               product={null}
+              categories={categories}
+            />
+          </Card>
+
+          <Card
+            title="Warengruppen"
+            description="Kurze, gepflegte Liste statt Freitext — sonst stehen „Ranzen“ und „Schulranzen“ nebeneinander."
+          >
+            <CategoryManager
+              categories={categories.map((entry) => ({
+                id: entry.id,
+                name: entry.name,
+                sortOrder: entry.sortOrder,
+                active: entry.active,
+                products: entry._count.products,
+              }))}
             />
           </Card>
 

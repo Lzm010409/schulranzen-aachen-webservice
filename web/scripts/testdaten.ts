@@ -13,6 +13,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { productSlug } from "../src/lib/normalize.js";
+import { seasonOf } from "../src/lib/season.js";
 
 const MARKER = "[Testdaten]";
 
@@ -21,12 +22,12 @@ const db = new PrismaClient({
 });
 
 const PRODUKTE = [
-  { name: "Ergobag Cubo", category: "Schulranzen", season: "2025" },
-  { name: "Satch Pack", category: "Schulranzen", season: "2025" },
-  { name: "Scout Sunny", category: "Schulranzen", season: "2024" },
-  { name: "Step by Step Space", category: "Schulranzen", season: "2024" },
-  { name: "Sporttasche Größe M", category: "Zubehör", season: "2025" },
-  { name: "Federmäppchen Set", category: "Zubehör", season: "2025" },
+  { name: "Ergobag Cubo", gruppe: "Schulranzen", modelljahr: 2025 },
+  { name: "Satch Pack", gruppe: "Schulranzen", modelljahr: 2025 },
+  { name: "Scout Sunny", gruppe: "Schulranzen", modelljahr: 2024 },
+  { name: "Step by Step Space", gruppe: "Schulranzen", modelljahr: 2024 },
+  { name: "Sporttasche Größe M", gruppe: "Zubehör", modelljahr: 2025 },
+  { name: "Federmäppchen Set", gruppe: "Zubehör", modelljahr: 2025 },
 ];
 
 type Person = {
@@ -168,22 +169,35 @@ async function entfernen() {
 }
 
 async function anlegen() {
+  // Warengruppen zuerst — die Produkte haengen daran.
+  const gruppenIds = new Map<string, string>();
+  for (const name of [...new Set(PRODUKTE.map((p) => p.gruppe))]) {
+    const slug = productSlug(name);
+    const saved = await db.productCategory.upsert({
+      where: { slug },
+      update: { name },
+      create: { name, slug },
+    });
+    gruppenIds.set(name, saved.id);
+  }
+
   const produktIds = new Map<string, string>();
   for (const produkt of PRODUKTE) {
     const slug = productSlug(produkt.name);
+    const felder = {
+      categoryId: gruppenIds.get(produkt.gruppe) ?? null,
+      modelYear: produkt.modelljahr,
+    };
     const saved = await db.product.upsert({
       where: { slug },
-      update: { category: produkt.category, season: produkt.season },
-      create: {
-        name: produkt.name,
-        slug,
-        category: produkt.category,
-        season: produkt.season,
-      },
+      update: felder,
+      create: { name: produkt.name, slug, ...felder },
     });
     produktIds.set(produkt.name, saved.id);
   }
-  console.log(`${PRODUKTE.length} Produkte sichergestellt.`);
+  console.log(
+    `${gruppenIds.size} Warengruppen und ${PRODUKTE.length} Produkte sichergestellt.`,
+  );
 
   let neu = 0;
   let kaeufe = 0;
@@ -230,7 +244,12 @@ async function anlegen() {
       if (schonDa) continue;
 
       await db.purchase.create({
-        data: { customerId: kunde.id, productId, purchasedAt },
+        data: {
+          customerId: kunde.id,
+          productId,
+          purchasedAt,
+          season: seasonOf(purchasedAt),
+        },
       });
       kaeufe += 1;
     }

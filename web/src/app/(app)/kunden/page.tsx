@@ -54,7 +54,8 @@ export default async function CustomersPage({
           ? [{ createdAt: dir as "asc" }]
           : [{ lastName: dir as "asc" }, { firstName: "asc" as const }];
 
-  const [total, customers, products, segments] = await Promise.all([
+  const [total, customers, products, categories, seasons, segments] =
+    await Promise.all([
     db.customer.count({ where }),
     db.customer.findMany({
       where,
@@ -64,16 +65,33 @@ export default async function CustomersPage({
       take: PAGE_SIZE,
     }),
     db.product.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.productCategory.findMany({
+      where: { active: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
+    // Nur Jahrgänge anbieten, zu denen es Käufe gibt — eine Liste von 1990 bis
+    // 2100 hilft niemandem. `groupBy` statt `distinct`, damit das Zusammenfassen
+    // in der Datenbank passiert und nicht zehntausend Zeilen hierher wandern.
+    db.purchase.groupBy({
+      by: ["season"],
+      where: { season: { not: null } },
+      orderBy: { season: "desc" },
+    }),
     db.segment.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   const exportParams = filterToSearchParams(filter);
   const productName = products.find((p) => p.id === filter.productId)?.name;
+  const categoryName = categories.find((c) => c.id === filter.categoryId)?.name;
+  const seasonYears = seasons
+    .map((entry) => entry.season)
+    .filter((year): year is number => year !== null);
 
   return (
     <>
       <PageHeader
-        description={`${total.toLocaleString("de-DE")} Datensätze · ${describeFilter(filter, productName)}`}
+        description={`${total.toLocaleString("de-DE")} Datensätze · ${describeFilter(filter, productName, categoryName)}`}
         actions={
           <>
             {can(user, "kunden.exportieren") ? (
@@ -103,6 +121,8 @@ export default async function CustomersPage({
         <CustomerFilterBar
           filter={filter}
           products={products}
+          categories={categories}
+          seasons={seasonYears}
           segments={segments.map((s) => ({
             id: s.id,
             name: s.name,

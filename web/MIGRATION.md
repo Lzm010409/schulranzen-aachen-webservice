@@ -139,6 +139,24 @@ Die alte Zeilen-ID wandert in `Purchase.legacyId` — daran hängt die
 Wiederholbarkeit: ein zweiter Lauf aktualisiert den Kauf, statt ihn erneut
 anzulegen, und hängt ihn bei Bedarf an den richtigen Kunden um.
 
+### Warengruppe und Saison
+
+Das Altsystem kannte weder das eine noch das andere. Die **Warengruppe** bleibt
+deshalb nach der Übernahme leer und lässt sich am Katalog nachtragen — sie wird
+nicht geraten.
+
+Die **Saison** dagegen entsteht rückwirkend für den gesamten Bestand, weil sie
+sich aus dem Kaufdatum ergibt:
+
+```
+Kauf im Januar–August       →  Einschulung im selben Jahr
+Kauf im September–Dezember  →  Einschulung im Folgejahr
+```
+
+Damit ist nach der Übernahme sofort filterbar, wer vor vier Jahren einen
+Ranzen gekauft hat. Zeilen ohne Kaufdatum bekommen keine Saison — geraten wird
+auch hier nichts.
+
 ### Feldbereinigung
 
 | Feld | Regel |
@@ -246,10 +264,18 @@ Erwartete Spalten (alle außer dem Namen optional):
 | Produkt | Produkt, Artikel |
 | Kaufdatum | Kaufdatum, Datum |
 | Notiz | Notiz, Bemerkung |
+| Warengruppe | Warengruppe, Kategorie, Sparte |
+| Modelljahr | Modelljahr, Kollektion |
+| Saison | Saison, Jahrgang, Einschulung, Schuljahr |
 
 Datumsangaben werden in `14.08.2024`, `2024-08-14`, `14/08/2024` und als
 Excel-Serienzahl gelesen. Unlesbare Werte führen nicht zum Abbruch — die Zeile
 wird ohne Kaufdatum übernommen und im Bericht genannt.
+
+Fehlt die Spalte *Saison*, wird der Jahrgang aus dem Kaufdatum abgeleitet.
+Steht dort etwas Unlesbares, gilt dasselbe — mit einem Hinweis im Bericht.
+Eine Warengruppe, die es noch nicht gibt, wird angelegt; abweichende
+Schreibweisen fallen über denselben Schlüssel zusammen wie bei den Produkten.
 
 ---
 

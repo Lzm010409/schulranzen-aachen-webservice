@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { Pagination } from "@/components/pagination";
+import { seasonLabel } from "@/lib/season";
 import {
   deleteCustomerAction,
   restoreCustomerAction,
@@ -57,7 +58,7 @@ export default async function CustomerDetailPage({
     db.purchase.findMany({
       where: { customerId: id },
       orderBy: [{ purchasedAt: "desc" }, { createdAt: "desc" }],
-      include: { product: true },
+      include: { product: { include: { category: true } } },
       skip: (purchasePage - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
@@ -159,15 +160,23 @@ export default async function CustomerDetailPage({
                 <thead>
                   <tr>
                     <Th>Produkt</Th>
+                    <Th>Warengruppe</Th>
                     <Th>Kaufdatum</Th>
+                    <Th>Saison</Th>
                   </tr>
                 </thead>
                 <tbody>
                   {purchases.map((purchase) => (
                     <tr key={purchase.id}>
                       <Td>{purchase.product.name}</Td>
+                      <Td className="muted">
+                        {purchase.product.category?.name ?? "—"}
+                      </Td>
                       <Td className="text-slate-600">
                         {formatDate(purchase.purchasedAt)}
+                      </Td>
+                      <Td className="tabular-nums text-slate-600">
+                        {seasonLabel(purchase.season)}
                       </Td>
                     </tr>
                   ))}

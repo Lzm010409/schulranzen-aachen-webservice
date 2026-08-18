@@ -954,3 +954,67 @@ table.grid a {
     animation-duration: 2s;
   }
 }
+
+/* Schalter innerhalb eines Feldes, etwa „neue Warengruppe“. */
+.link-button {
+  margin-top: 0.35rem;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--lumo-primary-text-color);
+  font-size: var(--lumo-font-size-xs);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-button:hover {
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------- Warengruppen */
+
+.category-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--lumo-contrast-10pct);
+}
+
+.category-list > li {
+  border-bottom: 1px solid var(--lumo-contrast-10pct);
+  padding: var(--lumo-space-xs) 0;
+}
+
+.category-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--lumo-space-s);
+  font-size: var(--lumo-font-size-s);
+}
+
+.category-row > :first-child {
+  flex: 1;
+}
+
+.category-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--lumo-space-s);
+}
+
+.category-form > * {
+  min-width: 0;
+}
+
+.category-order {
+  width: 5rem;
+}
+
+.category-active {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--lumo-font-size-s);
+  color: var(--lumo-secondary-text-color);
+}

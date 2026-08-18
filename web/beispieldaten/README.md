@@ -16,6 +16,11 @@ Erzeugt mit `npm run beispieldaten`.
 drin — daraus werden **zwei Kunden mit je zwei Käufen**, nicht vier Kunden.
 Jonas Königs hat kein Produkt und kein Kaufdatum: ein Interessent ohne Kauf.
 
+Die Spalte **Warengruppe** wird beim Import mit angelegt; Käufe bekommen ihre
+**Saison** (Einschulungsjahrgang) automatisch aus dem Kaufdatum. Ein Kauf im
+September oder später zählt zur Einschulung des Folgejahres — deshalb landet
+Ines Jansen mit dem 03.09.2021 in der Saison 2022.
+
 ## kunden-problemfaelle.csv
 
 Deckt die Fälle ab, an denen ein Import sonst stolpert:
@@ -46,6 +51,7 @@ Neun Zeilen im alten Modell „ein Kunde hat genau ein Produkt“. Daraus werden
 - Zeile 17 hat keinen Namen und wird ausgelassen
 - Produkt 1, 4 und 5 sind Schreibvarianten desselben Artikels und fallen
   zu einem Produkt zusammen
+- die Saison wird aus dem Kaufdatum abgeleitet; das Altsystem kannte sie nicht
 
 Der Abzug ist bewusst vollqualifiziert (`public.kunde`), damit sich prüfen
 lässt, dass der Import ihn in das Schema `legacy` umlenkt und die Tabellen
