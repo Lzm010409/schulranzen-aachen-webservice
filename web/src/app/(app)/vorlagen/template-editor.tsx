@@ -11,6 +11,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { PLACEHOLDERS } from "@/lib/template";
+import { MAX_BODY_LENGTH, describeBodyLength } from "@/lib/validation";
 import { saveTemplateAction, type TemplateFormState } from "./actions";
 
 export type TemplateValues = {
@@ -141,6 +142,18 @@ export function TemplateEditor({
               spellCheck={false}
               className="font-mono text-xs"
             />
+            {/* Die Grenze sichtbar machen: eingebettete Bilder fressen sie
+                schnell auf, und ohne Anzeige merkt man das erst beim
+                Speichern. */}
+            <p
+              className={
+                body.length > MAX_BODY_LENGTH
+                  ? "mt-1 text-xs text-red-600"
+                  : "mt-1 text-xs text-slate-500"
+              }
+            >
+              {describeBodyLength(body.length)}
+            </p>
             {state.errors?.body ? (
               <p className="mt-1 text-xs text-red-600">{state.errors.body}</p>
             ) : null}

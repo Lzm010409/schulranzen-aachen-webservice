@@ -17,7 +17,7 @@ PostgreSQL 16 · Tailwind 4 · Nodemailer
 | Verbindungstest | verschickte eine echte Mail an sich selbst | `SMTP VERIFY` ohne Versand |
 | Massenversand | Schleife im UI-Thread, Abbruch beim ersten Fehler, kein Protokoll | Warteschlange in der Datenbank, Rate-Limit, Backoff, Status je Empfänger |
 | Fortschritt | Balken wurde eingeblendet, aber nie hochgezählt | echter Fortschritt aus der Datenbank, übersteht einen Reload |
-| Empfängerwahl | Einzelklick in eine zweite Tabelle | Mehrfachauswahl, „alle Treffer", gespeicherte Segmente |
+| Empfängerwahl | Einzelklick in eine zweite Tabelle | Mehrfachauswahl über mehrere Seiten hinweg, „alle Treffer", gespeicherte Segmente |
 | Abmeldung | nicht vorhanden | signierter Abmeldelink + `List-Unsubscribe`-Header, Pflichtbestandteil jeder Mail |
 | Suche/Filter | Stichwort **oder** Zeitraum | alle Kriterien gleichzeitig, Filterstand steht in der URL |
 | Kunde ↔ Produkt | genau ein Produkt je Kunde | `Customer` + `Purchase`: mehrere Käufe je Kunde |
@@ -76,10 +76,20 @@ in `src/lib/__tests__/vorlage-coocazoo.test.ts` festgehalten.
 
 | Vorlage | Wofür |
 | --- | --- |
+| `standard-neutral.html` | Sachliche Nachricht ohne jede Werbung: Terminbestätigung, Rückfrage, Abholung, Öffnungszeiten |
 | `standard-klassik.html` | Allzweck: roter Kopf, Fließtext, Öffnungszeiten, dunkle Fußzeile |
 | `standard-aktion.html` | Ranzenwochen, Sonderangebote, Events: großer Aufmacher, Bildfläche, die vier Argumente der Website |
 | `standard-brief.html` | Persönliche Nachrichten: Terminbestätigung, Erinnerung, Service — viel Weißraum, feine rote Linie |
 | `coocazoo-colour-up.html` | Aktionsmail zum Colour-Up-Event: grünes Kopfband, Titelblock, Bildfläche, roter Terminknopf, Ablauf in drei Schritten |
+
+Das Logo sitzt in allen Vorlagen im Kopf (die öffentliche Adresse des
+Bildes von der Website); lädt es nicht, trägt die Wortmarke daneben.
+
+Vorlagen dürfen bis zu **5.000.000 Zeichen** lang sein — genug für
+eingebettete Bilder als `data:`-URI, die durch Base64 rund ein Drittel
+Aufschlag bekommen. Der Editor zeigt den Stand mit. Wo es geht, ist eine
+verlinkte Bilddatei unter `public/bilder/` trotzdem besser: Gmail und
+Outlook zeigen eingebettete Bilder oft gar nicht an.
 
 Farben, Schriften und feste Angaben stammen aus der Website und stehen in
 [`vorlagen/_styleguide.md`](./vorlagen/_styleguide.md) — Markenrot `#D7232A`,
@@ -200,7 +210,7 @@ openssl rand -base64 32       # für ENCRYPTION_KEY (muss genau 32 Byte sein)
 ## Tests
 
 ```bash
-npm test                      # 167 Tests: Normalisierung, Mailaufbau, Export,
+npm test                      # 185 Tests: Normalisierung, Mailaufbau, Export,
                               # SMTP-Fehler, Rechte, Import, Versandstrecke
 npm run typecheck
 
@@ -213,6 +223,7 @@ node scripts/import-check.mjs http://localhost:3000 legacy.dump  # 18 Prüfungen
 # sonst passen Server- und Browser-Bundle nicht zusammen.
 node scripts/pagination-check.mjs http://localhost:3000          # 24 Prüfungen
 node scripts/feedback-check.mjs http://localhost:3000            # 17 Prüfungen
+node scripts/auswahl-check.mjs http://localhost:3000             # 11 Prüfungen
 node scripts/kategorie-check.mjs http://localhost:3000 \
   postgresql://…/testdatenbank                                   # 16 Prüfungen
 
@@ -268,6 +279,7 @@ scripts/
   beispieldaten-check.mjs prüft die Beispieldateien gegen ihre Beschreibung
   pagination-check.mjs    prüft, dass jede Tabelle seitenweise blättert
   feedback-check.mjs      prüft Rückmeldungen und Ladezustand
+  auswahl-check.mjs       prüft, dass die Kundenauswahl das Blättern übersteht
   kategorie-check.mjs     prüft Warengruppen und Saison
   gross-check.mjs         Import mit 12.600 Zeilen am laufenden System
   vorlage-vorschau.ts     rendert eine Vorlage wie beim Versand

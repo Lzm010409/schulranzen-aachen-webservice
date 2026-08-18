@@ -120,10 +120,37 @@ export const mailAccountSchema = z.object({
   isDefault: z.coerce.boolean().default(false),
 });
 
+/**
+ * Obergrenze fuer Vorlagen- und Kampagnentexte.
+ *
+ * Die alten 200.000 Zeichen reichten fuer HTML, aber nicht fuer eingebettete
+ * Bilder: ein einziges Logo als data:-URI kostet schon ein Vielfaches davon,
+ * weil Base64 rund ein Drittel Aufschlag macht. Wer ein Bild einbetten wollte,
+ * bekam „Too big" ohne Aussicht, das Problem zu loesen.
+ *
+ * Fuenf Millionen Zeichen entsprechen etwa 3,5 MB Bildmaterial. Das deckt
+ * jedes vernuenftige Mail-Layout ab und bleibt weit unter der Grenze, die die
+ * Server Action durchlaesst (55 MB). Die Grenze bleibt bestehen, damit ein
+ * versehentlich eingefuegtes Riesenbild nicht erst beim Versand auffaellt.
+ */
+export const MAX_BODY_LENGTH = 5_000_000;
+
+/** Fuer die Meldung: „… von 5.000.000 Zeichen". */
+export function describeBodyLength(length: number): string {
+  return `${length.toLocaleString("de-DE")} von ${MAX_BODY_LENGTH.toLocaleString("de-DE")} Zeichen`;
+}
+
+const bodyField = (pflicht: boolean) => {
+  const feld = z.string().max(MAX_BODY_LENGTH, {
+    message: `Der Inhalt ist zu lang — erlaubt sind ${MAX_BODY_LENGTH.toLocaleString("de-DE")} Zeichen. Eingebettete Bilder (data:) verbrauchen ein Vielfaches ihrer Dateigröße; besser als Datei unter public/bilder/ ablegen und verlinken.`,
+  });
+  return pflicht ? feld.min(1, "Der Inhalt darf nicht leer sein") : feld;
+};
+
 export const templateSchema = z.object({
   name: requiredText("Name", 150),
   subject: requiredText("Betreff", 300),
-  body: z.string().min(1, "Der Inhalt darf nicht leer sein").max(200_000),
+  body: bodyField(true),
   isHtml: z.coerce.boolean().default(true),
   category: optionalText(100),
 });
@@ -149,7 +176,7 @@ export const passwordSchema = z
 export const campaignSchema = z.object({
   name: requiredText("Kampagnenname", 150),
   subject: requiredText("Betreff", 300),
-  body: z.string().max(200_000).default(""),
+  body: bodyField(false).default(""),
   templateId: z
     .string()
     .optional()
