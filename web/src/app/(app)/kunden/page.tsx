@@ -10,7 +10,6 @@ import {
 } from "@/lib/customer-filter";
 import { customerListSelect } from "@/lib/customers";
 import {
-  Alert,
   Badge,
   Card,
   LinkButton,
@@ -99,15 +98,6 @@ export default async function CustomersPage({
           </>
         }
       />
-
-      {params.geloescht ? (
-        <div className="mb-4">
-          <Alert variant="success">
-            Der Kunde wurde gelöscht und kann über den Filter „inkl. gelöschter“
-            wiederhergestellt werden.
-          </Alert>
-        </div>
-      ) : null}
 
       <div className="mb-4">
         <CustomerFilterBar

@@ -2,12 +2,11 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePermissionOrRedirect } from "@/lib/auth";
 import {
-  Alert,
-  Button,
   Card,
   PageHeader,
   formatDateTime,
 } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { Pagination } from "@/components/pagination";
 import { TemplateEditor } from "../template-editor";
 import {
@@ -55,23 +54,17 @@ export default async function TemplateDetailPage({
           <>
             <form action={duplicateTemplateAction}>
               <input type="hidden" name="id" value={template.id} />
-              <Button type="submit">Duplizieren</Button>
+              <SubmitButton busyLabel="Wird kopiert…">Duplizieren</SubmitButton>
             </form>
             <form action={deleteTemplateAction}>
               <input type="hidden" name="id" value={template.id} />
-              <Button type="submit" variant="error">
+              <SubmitButton variant="error" busyLabel="Wird gelöscht…">
                 Löschen
-              </Button>
+              </SubmitButton>
             </form>
           </>
         }
       />
-
-      {flags.gespeichert ? (
-        <div className="mb-4">
-          <Alert variant="success">Die Vorlage wurde gespeichert.</Alert>
-        </div>
-      ) : null}
 
       <TemplateEditor
         cancelHref="/vorlagen"
@@ -112,7 +105,9 @@ export default async function TemplateDetailPage({
                         name="versionId"
                         value={version.id}
                       />
-                      <Button type="submit">Wiederherstellen</Button>
+                      <SubmitButton busyLabel="Wird wiederhergestellt…">
+                        Wiederherstellen
+                      </SubmitButton>
                     </form>
                   ) : (
                     <span className="text-xs text-slate-500">aktuell</span>

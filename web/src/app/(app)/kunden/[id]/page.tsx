@@ -5,7 +5,6 @@ import { can } from "@/lib/permissions";
 import {
   Alert,
   Badge,
-  Button,
   Card,
   LinkButton,
   PageHeader,
@@ -15,6 +14,7 @@ import {
   formatDate,
   formatDateTime,
 } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { Pagination } from "@/components/pagination";
 import {
   deleteCustomerAction,
@@ -97,17 +97,6 @@ export default async function CustomerDetailPage({
           </>
         }
       />
-
-      {flags.gespeichert ? (
-        <div className="mb-4">
-          <Alert variant="success">Die Änderungen wurden gespeichert.</Alert>
-        </div>
-      ) : null}
-      {flags.wiederhergestellt ? (
-        <div className="mb-4">
-          <Alert variant="success">Der Kunde wurde wiederhergestellt.</Alert>
-        </div>
-      ) : null}
       {customer.deletedAt ? (
         <div className="mb-4">
           <Alert variant="warning" title="Dieser Kunde ist gelöscht">
@@ -117,7 +106,9 @@ export default async function CustomerDetailPage({
             </p>
             <form action={restoreCustomerAction}>
               <input type="hidden" name="id" value={customer.id} />
-              <Button type="submit">Wiederherstellen</Button>
+              <SubmitButton busyLabel="Wird wiederhergestellt…">
+                Wiederherstellen
+              </SubmitButton>
             </form>
           </Alert>
         </div>
@@ -263,11 +254,11 @@ export default async function CustomerDetailPage({
                 name="value"
                 value={customer.unsubscribedAt ? "0" : "1"}
               />
-              <Button type="submit">
+              <SubmitButton busyLabel="Wird gespeichert…">
                 {customer.unsubscribedAt
                   ? "Wieder anmelden"
                   : "Vom Newsletter abmelden"}
-              </Button>
+              </SubmitButton>
             </form>
           </Card>
 
@@ -278,9 +269,9 @@ export default async function CustomerDetailPage({
               </p>
               <form action={deleteCustomerAction}>
                 <input type="hidden" name="id" value={customer.id} />
-                <Button type="submit" variant="error">
+                <SubmitButton variant="error" busyLabel="Wird gelöscht…">
                   Kunde löschen
-                </Button>
+                </SubmitButton>
               </form>
             </Card>
           ) : null}

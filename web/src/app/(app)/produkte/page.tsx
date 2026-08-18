@@ -3,13 +3,13 @@ import { requirePermissionOrRedirect } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
   Badge,
-  Button,
   Card,
   PageHeader,
   Table,
   Td,
   Th,
 } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { Pagination } from "@/components/pagination";
 import { deleteProductAction } from "./actions";
 import { ProductEditor } from "./product-editor";
@@ -125,11 +125,11 @@ export default async function ProductsPage({
                               name="id"
                               value={product.id}
                             />
-                            <Button type="submit" variant="tertiary">
+                            <SubmitButton variant="tertiary" busyLabel="Einen Moment…">
                               {product._count.purchases > 0
                                 ? "Deaktivieren"
                                 : "Löschen"}
-                            </Button>
+                            </SubmitButton>
                           </form>
                         </div>
                         ) : null}

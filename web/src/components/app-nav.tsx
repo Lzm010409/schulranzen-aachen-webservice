@@ -5,6 +5,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { SessionUser } from "@/lib/auth";
 import { can, type Permission } from "@/lib/permissions";
+import { FlashBanner } from "./flash-banner";
+import { NavSpinner } from "./loading-bar";
+import type { Flash } from "@/lib/flash.shared";
 
 /**
  * Nachbau des Vaadin-AppLayouts: Schublade links mit dem Anwendungsnamen und
@@ -41,10 +44,12 @@ function titleFor(pathname: string): string {
 export function AppShell({
   user,
   logoutAction,
+  flash,
   children,
 }: {
   user: SessionUser;
   logoutAction: () => Promise<void>;
+  flash: Flash | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -91,6 +96,7 @@ export function AppShell({
                       {item.icon}
                     </span>
                     {item.label}
+                    <NavSpinner />
                   </Link>
                 </li>
               );
@@ -126,7 +132,10 @@ export function AppShell({
           </form>
         </header>
 
-        <main className="app-content">{children}</main>
+        <main className="app-content">
+          <FlashBanner flash={flash} />
+          {children}
+        </main>
       </div>
     </div>
   );

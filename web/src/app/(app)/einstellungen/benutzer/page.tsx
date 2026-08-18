@@ -3,13 +3,13 @@ import { requireUser } from "@/lib/auth";
 import {
   Alert,
   Badge,
-  Button,
   Card,
   Table,
   Td,
   Th,
   formatDateTime,
 } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { Pagination } from "@/components/pagination";
 import { PERMISSIONS } from "@/lib/permissions";
 import { deleteUserAction } from "../actions";
@@ -125,9 +125,9 @@ export default async function UsersPage({
                     {user.active && user.id !== current.id ? (
                       <form action={deleteUserAction}>
                         <input type="hidden" name="id" value={user.id} />
-                        <Button type="submit" variant="tertiary">
+                        <SubmitButton variant="tertiary" busyLabel="Wird deaktiviert…">
                           Deaktivieren
-                        </Button>
+                        </SubmitButton>
                       </form>
                     ) : null}
                   </div>

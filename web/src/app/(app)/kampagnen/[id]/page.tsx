@@ -6,7 +6,6 @@ import { campaignProgress } from "@/lib/queue";
 import {
   Alert,
   Badge,
-  Button,
   Card,
   Field,
   Input,
@@ -16,6 +15,7 @@ import {
   Th,
   formatDateTime,
 } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { Pagination } from "@/components/pagination";
 import { LiveProgress } from "../live-progress";
 import {
@@ -120,61 +120,36 @@ export default async function CampaignDetailPage({
             {isRunning && maySend ? (
               <form action={pauseCampaignAction}>
                 <input type="hidden" name="id" value={id} />
-                <Button type="submit">Pausieren</Button>
+                <SubmitButton busyLabel="Wird pausiert…">Pausieren</SubmitButton>
               </form>
             ) : null}
             {campaign.status === "PAUSED" && maySend ? (
               <form action={resumeCampaignAction}>
                 <input type="hidden" name="id" value={id} />
-                <Button type="submit" variant="primary">
+                <SubmitButton variant="primary" busyLabel="Wird fortgesetzt…">
                   Fortsetzen
-                </Button>
+                </SubmitButton>
               </form>
             ) : null}
             {(isRunning || campaign.status === "PAUSED") && maySend ? (
               <form action={cancelCampaignAction}>
                 <input type="hidden" name="id" value={id} />
-                <Button type="submit" variant="error">
+                <SubmitButton variant="error" busyLabel="Wird abgebrochen…">
                   Abbrechen
-                </Button>
+                </SubmitButton>
               </form>
             ) : null}
             {isDraft && mayCreate ? (
               <form action={deleteCampaignAction}>
                 <input type="hidden" name="id" value={id} />
-                <Button type="submit" variant="error">
+                <SubmitButton variant="error" busyLabel="Wird gelöscht…">
                   Entwurf löschen
-                </Button>
+                </SubmitButton>
               </form>
             ) : null}
           </>
         }
       />
-
-      {flags.fehler ? (
-        <div className="mb-4">
-          <Alert variant="error">{flags.fehler}</Alert>
-        </div>
-      ) : null}
-      {flags.test ? (
-        <div className="mb-4">
-          <Alert variant="success">Die Testmail wurde versendet.</Alert>
-        </div>
-      ) : null}
-      {flags.gestartet ? (
-        <div className="mb-4">
-          <Alert variant="success">
-            Der Versand läuft. Der Fortschritt aktualisiert sich automatisch.
-          </Alert>
-        </div>
-      ) : null}
-      {flags.wiederholt ? (
-        <div className="mb-4">
-          <Alert variant="success">
-            {flags.wiederholt} fehlgeschlagene Mails wurden erneut eingereiht.
-          </Alert>
-        </div>
-      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -205,17 +180,17 @@ export default async function CampaignDetailPage({
                     defaultValue={user.email}
                   />
                 </Field>
-                <Button type="submit">Testmail senden</Button>
+                <SubmitButton busyLabel="Wird gesendet…">Testmail senden</SubmitButton>
               </form>
 
               <div className="mt-5 border-t border-slate-200 pt-4">
                 {maySend ? (
                   <form action={startCampaignAction}>
                     <input type="hidden" name="id" value={id} />
-                    <Button type="submit" variant="primary">
+                    <SubmitButton variant="primary" busyLabel="Wird freigegeben…">
                       Versand an {progress.PENDING.toLocaleString("de-DE")}{" "}
                       Empfänger freigeben
-                    </Button>
+                    </SubmitButton>
                   </form>
                 ) : (
                   <Alert variant="info">
@@ -236,9 +211,9 @@ export default async function CampaignDetailPage({
                 maySend ? (
                 <form action={retryFailedAction}>
                   <input type="hidden" name="id" value={id} />
-                  <Button type="submit">
+                  <SubmitButton busyLabel="Wird eingereiht…">
                     Nur die Fehlgeschlagenen erneut senden
-                  </Button>
+                  </SubmitButton>
                 </form>
                 ) : null
               }

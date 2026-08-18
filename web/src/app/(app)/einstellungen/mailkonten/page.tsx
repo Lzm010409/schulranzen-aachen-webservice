@@ -4,13 +4,13 @@ import { TestMailForm } from "./test-mail-form";
 import {
   Alert,
   Badge,
-  Button,
   Card,
   Table,
   Td,
   Th,
   formatDateTime,
 } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import {
   deleteMailAccountAction,
   deleteProviderAction,
@@ -64,14 +64,6 @@ export default async function MailAccountsPage({
 
   return (
     <div className="space-y-6">
-      {flags.fehler ? <Alert variant="error">{flags.fehler}</Alert> : null}
-      {flags.test ? (
-        <Alert variant="success" title="Testmail versendet">
-          Die Testmail ging an <strong>{flags.test}</strong>. Kommt sie nicht an,
-          bitte auch den Spam-Ordner prüfen.
-        </Alert>
-      ) : null}
-
       <Alert variant="info" title="Wie die Zugangsdaten gespeichert werden">
         Das SMTP-Passwort wird mit AES-256-GCM verschlüsselt in der Datenbank
         abgelegt und nur zum Versandzeitpunkt entschlüsselt. Es erscheint weder
@@ -155,9 +147,9 @@ export default async function MailAccountsPage({
                     <div className="flex justify-end gap-1">
                       <form action={verifyMailAccountAction}>
                         <input type="hidden" name="id" value={account.id} />
-                        <Button type="submit" variant="tertiary">
+                        <SubmitButton variant="tertiary" busyLabel="Wird geprüft…">
                           Verbindung prüfen
-                        </Button>
+                        </SubmitButton>
                       </form>
                       <TestMailForm
                         accountId={account.id}
@@ -183,9 +175,9 @@ export default async function MailAccountsPage({
                       {account._count.campaigns === 0 ? (
                         <form action={deleteMailAccountAction}>
                           <input type="hidden" name="id" value={account.id} />
-                          <Button type="submit" variant="tertiary">
+                          <SubmitButton variant="tertiary" busyLabel="Wird gelöscht…">
                             Löschen
-                          </Button>
+                          </SubmitButton>
                         </form>
                       ) : null}
                     </div>
@@ -251,9 +243,9 @@ export default async function MailAccountsPage({
                       {provider._count.accounts === 0 ? (
                         <form action={deleteProviderAction}>
                           <input type="hidden" name="id" value={provider.id} />
-                          <Button type="submit" variant="tertiary">
+                          <SubmitButton variant="tertiary" busyLabel="Wird gelöscht…">
                             Löschen
-                          </Button>
+                          </SubmitButton>
                         </form>
                       ) : null}
                     </div>

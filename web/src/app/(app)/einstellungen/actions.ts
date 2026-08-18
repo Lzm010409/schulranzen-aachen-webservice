@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { requireAdmin, requirePermission, requireUser } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import { encryptSecret, hashPassword, verifyPassword } from "@/lib/crypto";
+import { flash } from "@/lib/flash";
 import {
   createTransport,
   describeSmtpError,
@@ -123,6 +124,9 @@ export async function saveUserAction(
     },
   });
 
+  if (id) await flash.gespeichert("Benutzer", data.name);
+  else await flash.angelegt("Benutzer", `${data.name} · ${data.email}`);
+
   revalidatePath("/einstellungen/benutzer");
   return { message: id ? "Benutzer aktualisiert." : "Benutzer angelegt." };
 }
@@ -130,14 +134,26 @@ export async function saveUserAction(
 export async function deleteUserAction(formData: FormData): Promise<void> {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  if (!id || id === admin.id) return;
+  if (!id) return;
+  if (id === admin.id) {
+    await flash.fehler("Das eigene Konto lässt sich nicht deaktivieren.");
+    revalidatePath("/einstellungen/benutzer");
+    return;
+  }
 
   const target = await db.user.findUnique({ where: { id } });
   if (target?.role === "ADMIN") {
     const admins = await db.user.count({
       where: { role: "ADMIN", active: true, id: { not: id } },
     });
-    if (admins === 0) return;
+    if (admins === 0) {
+      await flash.fehler(
+        "Der letzte Administrator kann nicht deaktiviert werden.",
+        "Sonst käme niemand mehr an die Benutzerverwaltung.",
+      );
+      revalidatePath("/einstellungen/benutzer");
+      return;
+    }
   }
 
   // Deaktivieren statt loeschen, damit die Protokolleintraege zuordenbar bleiben.
@@ -152,6 +168,10 @@ export async function deleteUserAction(formData: FormData): Promise<void> {
     diff: { active: { von: true, auf: false } },
   });
 
+  await flash.hinweis(
+    `${target?.name ?? "Benutzer"} deaktiviert.`,
+    "Das Konto bleibt für das Protokoll erhalten, offene Sitzungen sind beendet.",
+  );
   revalidatePath("/einstellungen/benutzer");
 }
 
@@ -186,6 +206,7 @@ export async function changeOwnPasswordAction(
     diff: { passwort: "geaendert" },
   });
 
+  await flash.gespeichert("Neues Passwort");
   return { message: "Das Passwort wurde geändert." };
 }
 
@@ -234,6 +255,7 @@ export async function saveProviderAction(
     diff: parsed.data,
   });
 
+  await flash.gespeichert("Provider", provider.name);
   revalidatePath("/einstellungen/mailkonten");
   return { message: "Provider gespeichert." };
 }
@@ -243,8 +265,18 @@ export async function deleteProviderAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const inUse = await db.mailAccount.count({ where: { providerId: id } });
-  if (inUse > 0) return;
-  await db.provider.delete({ where: { id } }).catch(() => undefined);
+  if (inUse > 0) {
+    await flash.fehler(
+      "Der Provider wird noch von einem Absenderkonto genutzt.",
+      "Erst das Konto entfernen oder auf einen anderen Provider umstellen.",
+    );
+    revalidatePath("/einstellungen/mailkonten");
+    return;
+  }
+
+  const removed = await db.provider.delete({ where: { id } }).catch(() => null);
+  if (removed) await flash.geloescht("Provider", removed.name);
+  else await flash.fehler("Den Provider gibt es nicht mehr.");
   revalidatePath("/einstellungen/mailkonten");
 }
 
@@ -307,6 +339,10 @@ export async function saveMailAccountAction(
     diff: { label: data.label, username: data.username, fromEmail: data.fromEmail },
   });
 
+  await flash.gespeichert(
+    "Absenderkonto",
+    "Bitte anschließend die Verbindung prüfen.",
+  );
   revalidatePath("/einstellungen/mailkonten");
   return { message: "Konto gespeichert. Bitte anschließend die Verbindung prüfen." };
 }
@@ -322,7 +358,11 @@ export async function verifyMailAccountAction(
   if (!id) return;
 
   const account = await loadAccount(id);
-  if (!account) return;
+  if (!account) {
+    await flash.fehler("Das Konto gibt es nicht mehr.");
+    revalidatePath("/einstellungen/mailkonten");
+    return;
+  }
 
   const result = await verifyAccount(account);
   await db.mailAccount.update({
@@ -332,6 +372,14 @@ export async function verifyMailAccountAction(
       : { lastVerifiedAt: null, lastError: result.error },
   });
 
+  if (result.ok) {
+    await flash.hinweis(
+      "Verbindung steht.",
+      `${account.provider.host}:${account.provider.port} nimmt die Anmeldung an.`,
+    );
+  } else {
+    await flash.fehler("Die Verbindung kam nicht zustande.", result.error);
+  }
   revalidatePath("/einstellungen/mailkonten");
 }
 
@@ -346,11 +394,17 @@ export async function sendAccountTestMailAction(
   const user = await requirePermission("mailkonten.verwalten");
   const id = String(formData.get("id") ?? "");
   const to = String(formData.get("testEmail") ?? "").trim();
-  if (!id || !to) return;
+  if (!id) return;
+  if (!to) {
+    await flash.fehler("Bitte eine Adresse für die Testmail angeben.");
+    revalidatePath("/einstellungen/mailkonten");
+    return;
+  }
 
   const account = await loadAccount(id);
   if (!account) {
-    redirect("/einstellungen/mailkonten?fehler=Konto+nicht+gefunden");
+    await flash.fehler("Das Konto gibt es nicht mehr.");
+    redirect("/einstellungen/mailkonten");
   }
 
   const transport = createTransport(account);
@@ -391,17 +445,20 @@ export async function sendAccountTestMailAction(
       diff: { testmailAn: to, messageId: info.messageId },
     });
 
+    await flash.hinweis(
+      "Testmail verschickt.",
+      `Ging an ${to}. Kommt sie nicht an, bitte auch den Spam-Ordner prüfen.`,
+    );
     revalidatePath("/einstellungen/mailkonten");
-    redirect(`/einstellungen/mailkonten?test=${encodeURIComponent(to)}`);
+    redirect("/einstellungen/mailkonten");
   } catch (error) {
     const message = describeSmtpError(error);
     await db.mailAccount
       .update({ where: { id }, data: { lastError: message } })
       .catch(() => undefined);
+    await flash.fehler("Die Testmail ging nicht hinaus.", message);
     revalidatePath("/einstellungen/mailkonten");
-    redirect(
-      `/einstellungen/mailkonten?fehler=${encodeURIComponent(message)}`,
-    );
+    redirect("/einstellungen/mailkonten");
   } finally {
     transport.close();
   }
@@ -415,8 +472,17 @@ export async function deleteMailAccountAction(
   if (!id) return;
   const inUse = await db.campaign.count({ where: { accountId: id } });
   if (inUse > 0) {
-    redirect("/einstellungen/mailkonten?fehler=Konto+wird+von+Kampagnen+genutzt");
+    await flash.fehler(
+      "Das Konto wird von Kampagnen genutzt.",
+      "Es bleibt erhalten, damit deren Versandprotokoll zuordenbar bleibt.",
+    );
+    redirect("/einstellungen/mailkonten");
   }
-  await db.mailAccount.delete({ where: { id } }).catch(() => undefined);
+
+  const removed = await db.mailAccount
+    .delete({ where: { id } })
+    .catch(() => null);
+  if (removed) await flash.geloescht("Absenderkonto", removed.label);
+  else await flash.fehler("Das Konto gibt es nicht mehr.");
   revalidatePath("/einstellungen/mailkonten");
 }

@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import { fieldErrors, templateSchema } from "@/lib/validation";
 import { unknownPlaceholders } from "@/lib/template";
+import { flash } from "@/lib/flash";
 
 export type TemplateFormState = {
   errors?: Record<string, string>;
@@ -84,8 +85,9 @@ export async function saveTemplateAction(
     diff: { name: data.name, subject: data.subject },
   });
 
+  await flash.gespeichert("Vorlage", data.name);
   revalidatePath("/vorlagen");
-  redirect(`/vorlagen/${savedId}?gespeichert=1`);
+  redirect(`/vorlagen/${savedId}`);
 }
 
 export async function deleteTemplateAction(formData: FormData): Promise<void> {
@@ -93,7 +95,7 @@ export async function deleteTemplateAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  await db.mailTemplate.update({
+  const removed = await db.mailTemplate.update({
     where: { id },
     data: { deletedAt: new Date() },
   });
@@ -104,6 +106,7 @@ export async function deleteTemplateAction(formData: FormData): Promise<void> {
     action: "DELETE",
   });
 
+  await flash.geloescht("Vorlage", removed.name);
   revalidatePath("/vorlagen");
   redirect("/vorlagen");
 }
@@ -116,7 +119,11 @@ export async function duplicateTemplateAction(
   if (!id) return;
 
   const source = await db.mailTemplate.findUnique({ where: { id } });
-  if (!source) return;
+  if (!source) {
+    await flash.fehler("Die Vorlage gibt es nicht mehr.");
+    revalidatePath("/vorlagen");
+    return;
+  }
 
   const copy = await db.mailTemplate.create({
     data: {
@@ -135,6 +142,7 @@ export async function duplicateTemplateAction(
     diff: { kopiertVon: id },
   });
 
+  await flash.angelegt("Kopie der Vorlage", copy.name);
   revalidatePath("/vorlagen");
   redirect(`/vorlagen/${copy.id}`);
 }
@@ -148,7 +156,10 @@ export async function restoreVersionAction(formData: FormData): Promise<void> {
   const version = await db.mailTemplateVersion.findUnique({
     where: { id: versionId },
   });
-  if (!version) return;
+  if (!version) {
+    await flash.fehler("Diese Fassung gibt es nicht mehr.");
+    return;
+  }
 
   const current = await db.mailTemplate.findUniqueOrThrow({
     where: { id: version.templateId },
@@ -185,8 +196,12 @@ export async function restoreVersionAction(formData: FormData): Promise<void> {
     diff: { wiederhergestellteVersion: version.version },
   });
 
+  await flash.hinweis(
+    `Fassung v${version.version} wiederhergestellt.`,
+    "Sie wurde als neue Version angelegt; nichts ging verloren.",
+  );
   revalidatePath(`/vorlagen/${version.templateId}`);
-  redirect(`/vorlagen/${version.templateId}?gespeichert=1`);
+  redirect(`/vorlagen/${version.templateId}`);
 }
 
 /** Prüft den Text im Editor, ohne zu speichern. */

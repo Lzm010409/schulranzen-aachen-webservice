@@ -30,6 +30,25 @@ PostgreSQL 16 · Tailwind 4 · Nodemailer
 
 ---
 
+## Rückmeldung und Ladezustand
+
+Jede Änderung meldet sich: gespeichert, angelegt, gelöscht, wiederhergestellt,
+abgebrochen, fehlgeschlagen. Die Meldung erscheint oben im Inhaltsbereich,
+Erfolgsmeldungen blenden sich nach ein paar Sekunden aus, Fehler bleiben
+stehen, bis sie weggeklickt werden.
+
+Technisch liegt die Meldung in einem kurzlebigen Cookie (`src/lib/flash.ts`).
+Das ist der einzige Weg, der für alle Aktionen dieser Anwendung funktioniert —
+die meisten leiten um oder rufen nur `revalidatePath` auf und haben deshalb
+keinen Rückgabewert, den ein Formular anzeigen könnte. Feldfehler in
+Formularen bleiben davon unberührt: die gehören an das Feld.
+
+Beim Laden zeigt die Anwendung, dass sie arbeitet: ein Seitenwechsel blendet
+eine Ladeanzeige ein (`src/app/(app)/loading.tsx`), der angeklickte
+Navigationseintrag bekommt einen Spinner, und Knöpfe, die eine Aktion
+auslösen, beschriften sich um („Wird gespeichert…") und sperren sich — das
+verhindert nebenbei Doppelklicks und damit doppelte Datensätze.
+
 ## Listen und Tabellen
 
 Jede Tabelle der Oberfläche blättert seitenweise: Kunden, Produkte, Vorlagen,
@@ -109,6 +128,7 @@ node scripts/smoke.mjs http://localhost:3000              # 25 Prüfungen
 node scripts/permissions-check.mjs http://localhost:3000  # 16 Prüfungen
 node scripts/import-check.mjs http://localhost:3000 legacy.dump  # 18 Prüfungen
 node scripts/pagination-check.mjs http://localhost:3000          # 17 Prüfungen
+node scripts/feedback-check.mjs http://localhost:3000            # 17 Prüfungen
 
 # Beispieldateien gegen ihre Beschreibung prüfen (leert dabei den Bestand,
 # deshalb nur gegen eine eigene Testdatenbank laufen lassen)
@@ -140,6 +160,7 @@ src/
     api/              Export, Health, Fortschritt
   lib/
     auth.ts           Sitzungen, Rechteprüfung, Rate-Limit
+    flash.ts          zentrale Rückmeldung nach jeder Änderung
     permissions.ts    Rechtekatalog, Vorlagen, abhängige Rechte
     crypto.ts         Passwort-Hash (scrypt), AES-256-GCM
     queue.ts          Empfänger einreihen, Fortschritt, Wiederholung
@@ -158,6 +179,7 @@ scripts/
   beispieldaten.ts        erzeugt die Beispieldateien
   beispieldaten-check.mjs prüft die Beispieldateien gegen ihre Beschreibung
   pagination-check.mjs    prüft, dass jede Tabelle seitenweise blättert
+  feedback-check.mjs      prüft Rückmeldungen und Ladezustand
   gross-check.mjs         Import mit 12.600 Zeilen am laufenden System
   etl/import.ts           Übernahme aus dem Altsystem (Kommandozeile)
 ```

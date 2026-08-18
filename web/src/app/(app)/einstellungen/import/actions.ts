@@ -19,6 +19,7 @@ import {
   type ImportPreview,
 } from "@/lib/import/customers";
 import { IMPORT_FIELDS, type ImportField } from "@/lib/import/table";
+import { flash } from "@/lib/flash";
 
 const MAX_UPLOAD = 50 * 1024 * 1024;
 
@@ -103,6 +104,10 @@ export async function legacyImportAction(
           kaeufe: result.stats.purchases,
         },
       });
+      await flash.hinweis(
+        "Übernahme abgeschlossen.",
+        `${result.stats.customers} Kunden und ${result.stats.purchases} Käufe aus dem Altsystem.`,
+      );
       revalidatePath("/kunden");
       revalidatePath("/produkte");
     }
@@ -227,6 +232,10 @@ export async function tableImportAction(
       },
     });
 
+    await flash.hinweis(
+      "Import abgeschlossen.",
+      `${outcome.createdCustomers} neue Kunden, ${outcome.updatedCustomers} ergänzt, ${outcome.createdPurchases} Käufe.`,
+    );
     revalidatePath("/kunden");
     revalidatePath("/produkte");
 

@@ -9,6 +9,7 @@ import { findDuplicates, findOrCreateProduct } from "@/lib/customers";
 import { customerSchema } from "@/lib/validation";
 import { fieldErrors } from "@/lib/validation";
 import { customerFilterSchema } from "@/lib/customer-filter";
+import { flash } from "@/lib/flash";
 
 export type CustomerFormState = {
   errors?: Record<string, string>;
@@ -134,8 +135,9 @@ export async function saveCustomerAction(
     return customer.id;
   });
 
+  await flash.gespeichert("Kunde", `${data.firstName} ${data.lastName}`);
   revalidatePath("/kunden");
-  redirect(`/kunden/${savedId}?gespeichert=1`);
+  redirect(`/kunden/${savedId}`);
 }
 
 export async function deleteCustomerAction(formData: FormData): Promise<void> {
@@ -155,8 +157,12 @@ export async function deleteCustomerAction(formData: FormData): Promise<void> {
     action: "DELETE",
   });
 
+  await flash.geloescht(
+    "Kunde",
+    "Der Datensatz ist ausgeblendet und lässt sich wiederherstellen.",
+  );
   revalidatePath("/kunden");
-  redirect("/kunden?geloescht=1");
+  redirect("/kunden");
 }
 
 export async function restoreCustomerAction(formData: FormData): Promise<void> {
@@ -172,8 +178,9 @@ export async function restoreCustomerAction(formData: FormData): Promise<void> {
     action: "RESTORE",
   });
 
+  await flash.hinweis("Kunde wiederhergestellt.");
   revalidatePath("/kunden");
-  redirect(`/kunden/${id}?wiederhergestellt=1`);
+  redirect(`/kunden/${id}`);
 }
 
 export async function setUnsubscribedAction(formData: FormData): Promise<void> {
@@ -197,6 +204,9 @@ export async function setUnsubscribedAction(formData: FormData): Promise<void> {
     diff: { unsubscribed: { von: !value, auf: value } },
   });
 
+  await flash.gespeichert(
+    value ? "Abmeldung vom Newsletter" : "Anmeldung zum Newsletter",
+  );
   revalidatePath(`/kunden/${id}`);
 }
 
@@ -204,7 +214,11 @@ export async function setUnsubscribedAction(formData: FormData): Promise<void> {
 export async function saveSegmentAction(formData: FormData): Promise<void> {
   await requirePermission("kunden.ansehen");
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) return;
+  if (!name) {
+    await flash.fehler("Das Segment braucht einen Namen.");
+    revalidatePath("/kunden");
+    return;
+  }
 
   const filter = customerFilterSchema.parse(
     Object.fromEntries(
@@ -220,6 +234,7 @@ export async function saveSegmentAction(formData: FormData): Promise<void> {
     create: { name, filter },
   });
 
+  await flash.gespeichert("Segment", name);
   revalidatePath("/kunden");
 }
 
@@ -227,6 +242,11 @@ export async function deleteSegmentAction(formData: FormData): Promise<void> {
   await requirePermission("kunden.ansehen");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
-  await db.segment.delete({ where: { id } }).catch(() => undefined);
+  const removed = await db.segment
+    .delete({ where: { id } })
+    .catch(() => null);
+
+  if (removed) await flash.geloescht("Segment", removed.name);
+  else await flash.fehler("Das Segment gibt es nicht mehr.");
   revalidatePath("/kunden");
 }

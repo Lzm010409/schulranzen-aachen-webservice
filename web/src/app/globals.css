@@ -844,3 +844,113 @@ table.grid a {
   padding: var(--lumo-space-m);
   background: var(--lumo-shade-5pct);
 }
+
+/* ------------------------------------------------- Rückmeldung und Laden */
+
+/*
+ * Die Rückmeldung liegt über dem Inhalt, damit sie unabhängig von der Länge
+ * der Seite dort auftaucht, wo gerade gearbeitet wird. Auf schmalen Geräten
+ * spannt sie über die volle Breite.
+ */
+.flash-area {
+  position: sticky;
+  top: var(--lumo-space-s);
+  z-index: 20;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--lumo-space-m);
+  pointer-events: none;
+}
+
+.flash {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--lumo-space-m);
+  max-width: 32rem;
+  box-shadow: var(--lumo-box-shadow-s);
+  pointer-events: auto;
+  animation: flash-in 160ms ease-out;
+}
+
+@keyframes flash-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.35rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash {
+    animation: none;
+  }
+}
+
+.flash-detail {
+  display: block;
+  margin-top: 0.15em;
+  opacity: 0.85;
+}
+
+.flash-close {
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 0.25em;
+  font-size: var(--lumo-font-size-l);
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.flash-close:hover {
+  opacity: 1;
+}
+
+.loading-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--lumo-space-s);
+  padding: var(--lumo-space-m);
+  border-radius: var(--lumo-border-radius-m);
+  background: var(--lumo-contrast-5pct);
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-s);
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+.loading-spinner-inline {
+  margin-right: 0.45em;
+  vertical-align: -0.1em;
+}
+
+.nav-spinner {
+  width: 0.75em;
+  height: 0.75em;
+  margin-left: auto;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner,
+  .nav-spinner {
+    animation-duration: 2s;
+  }
+}

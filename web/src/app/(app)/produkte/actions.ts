@@ -7,6 +7,7 @@ import { recordAudit } from "@/lib/audit";
 import { mergeProducts } from "@/lib/customers";
 import { productSlug } from "@/lib/normalize";
 import { fieldErrors, productSchema } from "@/lib/validation";
+import { flash } from "@/lib/flash";
 
 export type ProductFormState = { errors?: Record<string, string>; message?: string };
 
@@ -48,6 +49,9 @@ export async function saveProductAction(
     diff: data,
   });
 
+  if (id) await flash.gespeichert("Produkt", product.name);
+  else await flash.angelegt("Produkt", product.name);
+
   revalidatePath("/produkte");
   return { message: id ? "Produkt aktualisiert." : "Produkt angelegt." };
 }
@@ -60,7 +64,10 @@ export async function deleteProductAction(formData: FormData): Promise<void> {
   const used = await db.purchase.count({ where: { productId: id } });
   if (used > 0) {
     // Produkte mit Kaufhistorie werden nur deaktiviert, nie geloescht.
-    await db.product.update({ where: { id }, data: { active: false } });
+    const product = await db.product.update({
+      where: { id },
+      data: { active: false },
+    });
     await recordAudit({
       userId: user.id,
       entity: "Product",
@@ -68,14 +75,19 @@ export async function deleteProductAction(formData: FormData): Promise<void> {
       action: "UPDATE",
       diff: { active: { von: true, auf: false } },
     });
+    await flash.hinweis(
+      `„${product.name}“ deaktiviert.`,
+      `${used} Käufe hängen daran — deshalb bleibt der Eintrag erhalten.`,
+    );
   } else {
-    await db.product.delete({ where: { id } });
+    const product = await db.product.delete({ where: { id } });
     await recordAudit({
       userId: user.id,
       entity: "Product",
       entityId: id,
       action: "DELETE",
     });
+    await flash.geloescht("Produkt", product.name);
   }
 
   revalidatePath("/produkte");
@@ -86,8 +98,13 @@ export async function mergeProductsAction(formData: FormData): Promise<void> {
   const user = await requirePermission("produkte.verwalten");
   const sourceId = String(formData.get("sourceId") ?? "");
   const targetId = String(formData.get("targetId") ?? "");
-  if (!sourceId || !targetId || sourceId === targetId) return;
+  if (!sourceId || !targetId || sourceId === targetId) {
+    await flash.fehler("Bitte zwei verschiedene Produkte auswählen.");
+    revalidatePath("/produkte");
+    return;
+  }
 
+  const target = await db.product.findUnique({ where: { id: targetId } });
   const moved = await mergeProducts(sourceId, targetId);
 
   await recordAudit({
@@ -98,5 +115,9 @@ export async function mergeProductsAction(formData: FormData): Promise<void> {
     diff: { quelle: sourceId, ziel: targetId, verschobeneKaeufe: moved },
   });
 
+  await flash.hinweis(
+    "Produkte zusammengeführt.",
+    `${moved} Käufe gehören jetzt zu „${target?.name ?? "dem Ziel"}“.`,
+  );
   revalidatePath("/produkte");
 }

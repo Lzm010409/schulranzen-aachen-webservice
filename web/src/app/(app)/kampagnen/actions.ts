@@ -15,6 +15,7 @@ import {
   unsubscribeUrlFor,
 } from "@/lib/mailer";
 import { buildSalutation, renderEmail, renderPlaceholders } from "@/lib/template";
+import { flash } from "@/lib/flash";
 
 const MAX_ATTACHMENT_TOTAL = 10 * 1024 * 1024;
 
@@ -112,6 +113,10 @@ export async function createCampaignAction(
     diff: { empfaenger: result.queued, uebersprungen: result.skipped },
   });
 
+  await flash.angelegt(
+    "Kampagne",
+    `${result.queued} Empfänger vorgemerkt. Der Versand startet erst mit der Freigabe.`,
+  );
   redirect(`/kampagnen/${campaign.id}`);
 }
 
@@ -122,7 +127,12 @@ export async function sendTestMailAction(
   const user = await requirePermission("kampagnen.erstellen");
   const campaignId = String(formData.get("campaignId") ?? "");
   const to = String(formData.get("testEmail") ?? "").trim();
-  if (!campaignId || !to) return;
+  if (!campaignId) return;
+  if (!to) {
+    await flash.fehler("Bitte eine Adresse für die Testmail angeben.");
+    revalidatePath(`/kampagnen/${campaignId}`);
+    return;
+  }
 
   const campaign = await db.campaign.findUnique({
     where: { id: campaignId },
@@ -132,7 +142,11 @@ export async function sendTestMailAction(
 
   const account = await loadAccount(campaign.accountId);
   if (!account) {
-    redirect(`/kampagnen/${campaignId}?fehler=Absenderkonto+fehlt`);
+    await flash.fehler(
+      "Der Kampagne fehlt ein Absenderkonto.",
+      "Unter Einstellungen → Mailkonten hinterlegen.",
+    );
+    redirect(`/kampagnen/${campaignId}`);
   }
 
   // Für den Test wird ein echter Empfänger der Kampagne als Datenquelle
@@ -200,11 +214,14 @@ export async function sendTestMailAction(
       action: "SEND",
       diff: { testmailAn: to },
     });
-    redirect(`/kampagnen/${campaignId}?test=ok`);
+    await flash.hinweis("Testmail verschickt.", `Ging an ${to}.`);
+    redirect(`/kampagnen/${campaignId}`);
   } catch (error) {
-    redirect(
-      `/kampagnen/${campaignId}?fehler=${encodeURIComponent(describeSmtpError(error))}`,
+    await flash.fehler(
+      "Die Testmail ging nicht hinaus.",
+      describeSmtpError(error),
     );
+    redirect(`/kampagnen/${campaignId}`);
   } finally {
     transport.close();
   }
@@ -221,7 +238,8 @@ export async function startCampaignAction(formData: FormData): Promise<void> {
     where: { campaignId: id, status: "PENDING" },
   });
   if (pending === 0) {
-    redirect(`/kampagnen/${id}?fehler=Keine+offenen+Empfaenger`);
+    await flash.fehler("Es gibt keine offenen Empfänger mehr.");
+    redirect(`/kampagnen/${id}`);
   }
 
   await db.campaign.update({
@@ -236,8 +254,12 @@ export async function startCampaignAction(formData: FormData): Promise<void> {
     diff: { freigegeben: pending },
   });
 
+  await flash.hinweis(
+    "Versand freigegeben.",
+    `${pending} Empfänger sind eingereiht; der Fortschritt aktualisiert sich von selbst.`,
+  );
   revalidatePath(`/kampagnen/${id}`);
-  redirect(`/kampagnen/${id}?gestartet=1`);
+  redirect(`/kampagnen/${id}`);
 }
 
 export async function pauseCampaignAction(formData: FormData): Promise<void> {
@@ -245,6 +267,7 @@ export async function pauseCampaignAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.campaign.update({ where: { id }, data: { status: "PAUSED" } });
+  await flash.hinweis("Versand pausiert.", "Bereits begonnene Mails gehen noch hinaus.");
   revalidatePath(`/kampagnen/${id}`);
 }
 
@@ -253,6 +276,7 @@ export async function resumeCampaignAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.campaign.update({ where: { id }, data: { status: "SENDING" } });
+  await flash.hinweis("Versand fortgesetzt.");
   revalidatePath(`/kampagnen/${id}`);
 }
 
@@ -279,6 +303,10 @@ export async function cancelCampaignAction(formData: FormData): Promise<void> {
     diff: { status: { von: "SENDING", auf: "CANCELLED" } },
   });
 
+  await flash.warnung(
+    "Kampagne abgebrochen.",
+    "Offene Empfänger werden nicht mehr angeschrieben.",
+  );
   revalidatePath(`/kampagnen/${id}`);
 }
 
@@ -287,8 +315,13 @@ export async function retryFailedAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const count = await retryFailed(id);
+  if (count > 0) {
+    await flash.hinweis(`${count} Empfänger erneut eingereiht.`);
+  } else {
+    await flash.hinweis("Es gab nichts zu wiederholen.");
+  }
   revalidatePath(`/kampagnen/${id}`);
-  redirect(`/kampagnen/${id}?wiederholt=${count}`);
+  redirect(`/kampagnen/${id}`);
 }
 
 export async function deleteCampaignAction(formData: FormData): Promise<void> {
@@ -298,8 +331,13 @@ export async function deleteCampaignAction(formData: FormData): Promise<void> {
   const campaign = await db.campaign.findUnique({ where: { id } });
   // Versendete Kampagnen bleiben als Nachweis erhalten.
   if (!campaign || campaign.status !== "DRAFT") {
-    redirect(`/kampagnen/${id}?fehler=Nur+Entwuerfe+koennen+geloescht+werden`);
+    await flash.fehler(
+      "Nur Entwürfe lassen sich löschen.",
+      "Versendete Kampagnen bleiben als Nachweis erhalten.",
+    );
+    redirect(`/kampagnen/${id}`);
   }
   await db.campaign.delete({ where: { id } });
+  await flash.geloescht("Kampagne", campaign.name);
   redirect("/kampagnen");
 }
