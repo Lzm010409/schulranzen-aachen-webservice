@@ -48,7 +48,7 @@ Rechte. Für **Mitarbeiter** wird jedes Recht einzeln vergeben:
 | Produkte | Ansehen · Anlegen, bearbeiten, zusammenführen |
 | Vorlagen | Ansehen · Anlegen und bearbeiten |
 | Mailversand | Ansehen · Entwürfe anlegen und testen · **Versand freigeben** |
-| Verwaltung | Mailkonten und Provider · Protokoll einsehen · Benutzer verwalten |
+| Verwaltung | Mailkonten und Provider · Daten importieren · Protokoll einsehen · Benutzer verwalten |
 
 Vier Vorlagen füllen die Auswahl vor: *Vollzugriff*, *Sachbearbeitung*
 (bereitet Mails vor, gibt sie aber nicht frei), *Versand* und *Nur Lesen*.
@@ -86,13 +86,14 @@ openssl rand -base64 32       # für ENCRYPTION_KEY (muss genau 32 Byte sein)
 ## Tests
 
 ```bash
-npm test                      # 74 Tests: Normalisierung, Mailaufbau, Export,
-                              # SMTP-Fehler, Rechte, ETL, Versandstrecke
+npm test                      # 106 Tests: Normalisierung, Mailaufbau, Export,
+                              # SMTP-Fehler, Rechte, Import, Versandstrecke
 npm run typecheck
 
 # End-to-End im Browser gegen eine laufende Instanz
 node scripts/smoke.mjs http://localhost:3000              # 25 Prüfungen
 node scripts/permissions-check.mjs http://localhost:3000  # 16 Prüfungen
+node scripts/import-check.mjs http://localhost:3000 legacy.dump  # 18 Prüfungen
 ```
 
 `permissions-check.mjs` legt ein Konto mit der Vorlage *Nur Lesen* an, meldet
@@ -113,7 +114,7 @@ src/
       produkte/       Katalog inkl. Zusammenführen
       vorlagen/       Editor mit Vorschau und Versionen
       kampagnen/      Entwurf → Test → Freigabe → Fortschritt
-      einstellungen/  Konto, Mailkonten, Benutzer, Protokoll
+      einstellungen/  Konto, Mailkonten, Benutzer, Import, Protokoll
     login/            Anmeldung
     abmelden/[token]/ öffentliche Abmeldeseite
     api/              Export, Health, Fortschritt
@@ -127,11 +128,14 @@ src/
     template.ts       Platzhalter, Sanitisierung, Mailaufbau
     customer-filter.ts Filter → Prisma-Bedingung
     export.ts         CSV-Streaming und XLSX
+    import/           Übernahme aus dem Altsystem, CSV/Excel-Import
 scripts/
   seed.ts                 erster Administrator + Standard-Provider
+  testdaten.ts            Testdaten anlegen und entfernen
   smoke.mjs               End-to-End-Test im Browser
   permissions-check.mjs   prüft die Rechte am laufenden System
-  etl/                Datenübernahme aus dem Altsystem
+  import-check.mjs        prüft beide Importwege am laufenden System
+  etl/import.ts           Übernahme aus dem Altsystem (Kommandozeile)
 ```
 
 Der Versand-Worker läuft im selben Prozess wie die Anwendung (gestartet über
@@ -147,6 +151,20 @@ Warteschlange liegt in der Tabelle `mail_job`, ein Neustart verliert nichts.
 - **Mehrere Instanzen** sind möglich: die Jobs werden per
   `FOR UPDATE SKIP LOCKED` geholt, jeder Job geht an genau einen Worker.
 
-## Datenübernahme aus dem Altsystem
+## Import und Testdaten
 
-Siehe [MIGRATION.md](./MIGRATION.md).
+In der Anwendung unter **Einstellungen → Import**:
+
+- **Übernahme aus dem Altsystem** — Dump hochladen oder Direktverbindung
+  angeben, erst Trockenlauf mit Bericht, dann Übernahme
+- **Kunden aus CSV oder Excel** — Spalten werden erraten und lassen sich
+  korrigieren, Vorschau vor dem Schreiben
+
+Testdaten für Schulung und Abnahme:
+
+```bash
+npm run testdaten          # anlegen (wiederholbar)
+npm run testdaten -- --weg # wieder entfernen
+```
+
+Alle Einzelheiten in [MIGRATION.md](./MIGRATION.md).

@@ -14,7 +14,8 @@
     "prisma:migrate": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed": "tsx scripts/seed.ts",
-    "etl:import": "tsx scripts/etl/import.ts"
+    "etl:import": "tsx scripts/etl/import.ts",
+    "testdaten": "tsx scripts/testdaten.ts"
   },
   "prisma": {
     "seed": "tsx scripts/seed.ts"

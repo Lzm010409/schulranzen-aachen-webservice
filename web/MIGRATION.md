@@ -1,5 +1,10 @@
 # Datenübernahme aus dem Vaadin-Altsystem
 
+> **In der Anwendung:** Einstellungen → Import. Dort lässt sich beides ohne
+> Kommandozeile erledigen — Dump hochladen oder Direktverbindung angeben,
+> erst Trockenlauf, dann Übernahme. Die folgende Beschreibung gilt für beide
+> Wege; die Kommandozeile ist nur die Alternative für große Bestände.
+
 Die Übernahme ist **wiederholbar** und **trockenlauffähig**. Jeder übernommene
 Datensatz merkt sich seine alte ID (`legacyId`); ein zweiter Durchlauf
 aktualisiert, statt zu verdoppeln. Geschrieben wird in einer einzigen
@@ -51,8 +56,9 @@ docker exec -it <container> npm run etl:import -- \
 docker cp <container>:/tmp/uebernahme.md .
 ```
 
-Der Rohbestand liegt danach unverändert im Schema `legacy` der neuen
-Datenbank — jederzeit nachprüfbar:
+Der Rohbestand liegt danach im Schema `legacy` der neuen Datenbank — jederzeit
+nachprüfbar. Vor jedem Einspielen wird diese Zwischenablage geleert, sie
+enthält also immer genau den zuletzt eingespielten Dump:
 
 ```sql
 SELECT * FROM legacy.kunde WHERE id = 4711;
@@ -93,10 +99,13 @@ verdichtet). Gleichwertige Schreibweisen fallen zu einem Produkt zusammen.
 Genau dieses Duplikatmuster entstand im Altsystem, weil die Freitext-Auswahl
 im Kundenformular bei jedem Speichern einen neuen Datensatz anlegte.
 
-### Kunden und Käufe
+### Kunden und Käufe — die wichtigste Umstellung
 
-Das Altsystem hatte **eine Zeile je Kauf** — wer zweimal kaufte, stand zweimal
-in der Tabelle. Das neue Modell trennt Person und Kauf:
+Das Altsystem kannte **einen Kunden mit genau einem Produkt**: `Kunde` hatte
+ein Feld `product_id` und ein `kaufdatum`. Wer zweimal kaufte, stand zweimal in
+der Tabelle — mit denselben Stammdaten und einem zweiten Datensatz.
+
+Das neue Modell trennt Person und Kauf: `Customer` *1:n* `Purchase`.
 
 ```
 kunde(10) "Anna Müller, Ergobag, 2023"  ┐
@@ -111,7 +120,13 @@ Zusammengeführt wird in dieser Reihenfolge:
 2. **gleicher Name + PLZ + Straße** — greift auch, wenn eine Zeile keine
    Adresse hat
 
-Jede Zusammenführung steht einzeln im Bericht.
+Jede Altzeile wird dabei zu **genau einem Kauf** und behält ihr eigenes Produkt
+und Kaufdatum. Zwei Käufe desselben Produkts an verschiedenen Tagen bleiben
+zwei Käufe. Jede Zusammenführung steht einzeln im Bericht.
+
+Die alte Zeilen-ID wandert in `Purchase.legacyId` — daran hängt die
+Wiederholbarkeit: ein zweiter Lauf aktualisiert den Kauf, statt ihn erneut
+anzulegen, und hängt ihn bei Bedarf an den richtigen Kunden um.
 
 ### Feldbereinigung
 
@@ -184,3 +199,58 @@ Tagen Parallelbetrieb) einfach denselben Befehl erneut ausführen — bereits
 
 Jeder Lauf wird in der Tabelle `migration_run` protokolliert, samt
 vollständigem Bericht im Feld `report`.
+
+---
+
+## Allgemeiner Import aus CSV oder Excel
+
+Für Bestände, die nicht aus dem Vaadin-System stammen: **Einstellungen →
+Import → Kunden aus CSV oder Excel**.
+
+- CSV mit Semikolon, Komma oder Tabulator, mit oder ohne BOM — auch `.xlsx`
+- Die Spalten werden aus den Überschriften erraten (deutsch und englisch) und
+  lassen sich vor dem Import korrigieren
+- **Erst Vorschau:** wie viele Kunden neu wären, wie viele ergänzt würden,
+  wie viele Käufe entstehen, welche Produkte neu angelegt würden, und jede
+  Auffälligkeit mit Zeilennummer
+- Dieselbe Zusammenführungsregel wie oben: mehrere Zeilen derselben Person
+  werden zu **einem Kunden mit mehreren Käufen**
+- Wiederholtes Einlesen derselben Datei erzeugt keine Dubletten — bestehende
+  Kunden werden ergänzt, identische Käufe übersprungen
+
+Erwartete Spalten (alle außer dem Namen optional):
+
+| Spalte | Beispiele für die Überschrift |
+| --- | --- |
+| Vorname | Vorname, First Name |
+| Nachname | Nachname, Name, Last Name |
+| Adresse | Adresse, Straße, Anschrift |
+| PLZ | PLZ, Postleitzahl |
+| Stadt | Stadt, Ort |
+| E-Mail | Mail, E-Mail, E-Mail-Adresse |
+| Telefon | Telefon, Tel, Handy |
+| Produkt | Produkt, Artikel |
+| Kaufdatum | Kaufdatum, Datum |
+| Notiz | Notiz, Bemerkung |
+
+Datumsangaben werden in `14.08.2024`, `2024-08-14`, `14/08/2024` und als
+Excel-Serienzahl gelesen. Unlesbare Werte führen nicht zum Abbruch — die Zeile
+wird ohne Kaufdatum übernommen und im Bericht genannt.
+
+---
+
+## Testdaten
+
+Für Schulung und Abnahme:
+
+```bash
+npm run testdaten          # anlegen (wiederholbar)
+npm run testdaten -- --weg # wieder entfernen
+```
+
+Erzeugt zehn Kunden im Raum Aachen mit sechs Produkten und dreizehn Käufen —
+darunter bewusst unsaubere Fälle: einer ohne E-Mail, einer abgemeldet, einer
+mit Zustellfehler, drei mit mehreren Käufen. Dazu eine Vorlage und ein
+gespeichertes Segment. Alle Datensätze tragen `[Testdaten]` in der Notiz und
+lassen sich damit rückstandsfrei entfernen; Produkte bleiben stehen, wenn
+inzwischen echte Käufe daran hängen.

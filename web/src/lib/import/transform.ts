@@ -5,8 +5,8 @@ import {
   normalizePhone,
   normalizeZip,
   productSlug,
-} from "../../src/lib/normalize.js";
-import type { LegacyData, LegacyKunde } from "./read-legacy.js";
+} from "../normalize";
+import type { LegacyData, LegacyKunde } from "./read-legacy";
 
 /**
  * Rechnet den Altbestand in das neue Modell um. Bewusst frei von

@@ -55,6 +55,11 @@ export const PERMISSIONS = [
         label: "Mailkonten und Provider",
         hint: "Zugriff auf die hinterlegten SMTP-Zugänge",
       },
+      {
+        key: "daten.importieren",
+        label: "Daten importieren",
+        hint: "Übernahme aus dem Altsystem und Import aus CSV/Excel",
+      },
       { key: "protokoll.ansehen", label: "Protokoll einsehen" },
       {
         key: "benutzer.verwalten",
@@ -191,6 +196,7 @@ const IMPLIED: Partial<Record<Permission, Permission[]>> = {
   "produkte.verwalten": ["produkte.ansehen"],
   "vorlagen.verwalten": ["vorlagen.ansehen"],
   "kampagnen.erstellen": ["kampagnen.ansehen", "kunden.ansehen"],
+  "daten.importieren": ["kunden.ansehen", "kunden.bearbeiten", "produkte.ansehen"],
   "kampagnen.senden": ["kampagnen.ansehen", "kampagnen.erstellen", "kunden.ansehen"],
 };
 

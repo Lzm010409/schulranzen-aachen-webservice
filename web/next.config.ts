@@ -12,7 +12,8 @@ const config: NextConfig = {
   serverExternalPackages: ["nodemailer", "exceljs", "@prisma/adapter-pg"],
   experimental: {
     // Server Actions bekommen Datei-Anhaenge; der Standard von 1 MB reicht nicht.
-    serverActions: { bodySizeLimit: "12mb" },
+    // Import von Dumps und Tabellen; Anhaenge bleiben bei 10 MB gedeckelt.
+    serverActions: { bodySizeLimit: "55mb" },
   },
   async headers() {
     return [

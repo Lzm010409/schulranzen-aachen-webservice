@@ -8,6 +8,7 @@ const ITEMS = [
   { href: "/einstellungen", label: "Mein Konto", exact: true },
   { href: "/einstellungen/mailkonten", label: "Mailkonten" },
   { href: "/einstellungen/benutzer", label: "Benutzer" },
+  { href: "/einstellungen/import", label: "Import" },
   { href: "/einstellungen/protokoll", label: "Protokoll" },
 ];
 

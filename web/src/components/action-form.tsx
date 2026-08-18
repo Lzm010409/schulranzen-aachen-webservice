@@ -31,7 +31,14 @@ export function ActionForm({
         onSubmit?.(event);
         if (event.defaultPrevented) return;
         event.preventDefault();
-        const data = new FormData(event.currentTarget);
+        // Der ausloesende Knopf muss mitgegeben werden: `new FormData(form)`
+        // allein uebernimmt name/value des Submit-Buttons nicht, und genau
+        // darueber unterscheiden Formulare mit mehreren Knoepfen ihre Aktion.
+        const submitter = (event.nativeEvent as SubmitEvent).submitter;
+        const data = new FormData(
+          event.currentTarget,
+          submitter instanceof HTMLElement ? submitter : null,
+        );
         startTransition(() => action(data));
       }}
     >

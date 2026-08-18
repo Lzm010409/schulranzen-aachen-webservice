@@ -6,7 +6,12 @@ import { db } from "@/lib/db";
 import { requireAdmin, requirePermission, requireUser } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import { encryptSecret, hashPassword, verifyPassword } from "@/lib/crypto";
-import { loadAccount, verifyAccount } from "@/lib/mailer";
+import {
+  createTransport,
+  describeSmtpError,
+  loadAccount,
+  verifyAccount,
+} from "@/lib/mailer";
 import {
   DEFAULT_PERMISSIONS,
   sanitizePermissions,
@@ -328,6 +333,78 @@ export async function verifyMailAccountAction(
   });
 
   revalidatePath("/einstellungen/mailkonten");
+}
+
+/**
+ * Verschickt eine echte Testmail ueber das gewaehlte Konto. `verify()` prueft
+ * nur die Anmeldung — erst eine zugestellte Mail zeigt, dass der Provider den
+ * Absender auch akzeptiert und die Nachricht durchlaesst.
+ */
+export async function sendAccountTestMailAction(
+  formData: FormData,
+): Promise<void> {
+  const user = await requirePermission("mailkonten.verwalten");
+  const id = String(formData.get("id") ?? "");
+  const to = String(formData.get("testEmail") ?? "").trim();
+  if (!id || !to) return;
+
+  const account = await loadAccount(id);
+  if (!account) {
+    redirect("/einstellungen/mailkonten?fehler=Konto+nicht+gefunden");
+  }
+
+  const transport = createTransport(account);
+  try {
+    const info = await transport.sendMail({
+      from: { name: account.fromName, address: account.fromEmail },
+      to,
+      subject: "Testmail aus dem Schulranzen-Aachen-Webservice",
+      text: [
+        "Diese Testmail bestaetigt, dass der Versand ueber dieses Konto funktioniert.",
+        "",
+        `Absender: ${account.fromName} <${account.fromEmail}>`,
+        `Server:   ${account.provider.host}:${account.provider.port} (${account.provider.security === "SSL" ? "SSL/TLS" : "STARTTLS"})`,
+        `Gesendet: ${new Date().toLocaleString("de-DE")}`,
+        "",
+        "Wenn diese Nachricht angekommen ist, koennen Kampagnen ueber dieses Konto versendet werden.",
+      ].join("\n"),
+      html: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6">
+<p>Diese Testmail bestätigt, dass der Versand über dieses Konto funktioniert.</p>
+<table cellpadding="4" style="border-collapse:collapse;font-size:14px">
+<tr><td><strong>Absender</strong></td><td>${account.fromName} &lt;${account.fromEmail}&gt;</td></tr>
+<tr><td><strong>Server</strong></td><td>${account.provider.host}:${account.provider.port} (${account.provider.security === "SSL" ? "SSL/TLS" : "STARTTLS"})</td></tr>
+<tr><td><strong>Gesendet</strong></td><td>${new Date().toLocaleString("de-DE")}</td></tr>
+</table>
+<p style="color:#666;font-size:13px">Wenn diese Nachricht angekommen ist, können Kampagnen über dieses Konto versendet werden.</p>
+</div>`,
+    });
+
+    await db.mailAccount.update({
+      where: { id },
+      data: { lastVerifiedAt: new Date(), lastError: null },
+    });
+    await recordAudit({
+      userId: user.id,
+      entity: "MailAccount",
+      entityId: id,
+      action: "SEND",
+      diff: { testmailAn: to, messageId: info.messageId },
+    });
+
+    revalidatePath("/einstellungen/mailkonten");
+    redirect(`/einstellungen/mailkonten?test=${encodeURIComponent(to)}`);
+  } catch (error) {
+    const message = describeSmtpError(error);
+    await db.mailAccount
+      .update({ where: { id }, data: { lastError: message } })
+      .catch(() => undefined);
+    revalidatePath("/einstellungen/mailkonten");
+    redirect(
+      `/einstellungen/mailkonten?fehler=${encodeURIComponent(message)}`,
+    );
+  } finally {
+    transport.close();
+  }
 }
 
 export async function deleteMailAccountAction(

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { requirePermissionOrRedirect } from "@/lib/auth";
+import { TestMailForm } from "./test-mail-form";
 import {
   Alert,
   Badge,
@@ -13,6 +14,7 @@ import {
 import {
   deleteMailAccountAction,
   deleteProviderAction,
+  sendAccountTestMailAction,
   verifyMailAccountAction,
 } from "../actions";
 import { AccountEditor } from "./account-editor";
@@ -26,7 +28,7 @@ export default async function MailAccountsPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  await requirePermissionOrRedirect("mailkonten.verwalten");
+  const user = await requirePermissionOrRedirect("mailkonten.verwalten");
   const flags = await searchParams;
 
   const [accounts, providers] = await Promise.all([
@@ -43,6 +45,12 @@ export default async function MailAccountsPage({
   return (
     <div className="space-y-6">
       {flags.fehler ? <Alert variant="error">{flags.fehler}</Alert> : null}
+      {flags.test ? (
+        <Alert variant="success" title="Testmail versendet">
+          Die Testmail ging an <strong>{flags.test}</strong>. Kommt sie nicht an,
+          bitte auch den Spam-Ordner prüfen.
+        </Alert>
+      ) : null}
 
       <Alert variant="info" title="Wie die Zugangsdaten gespeichert werden">
         Das SMTP-Passwort wird mit AES-256-GCM verschlüsselt in der Datenbank
@@ -131,6 +139,11 @@ export default async function MailAccountsPage({
                           Verbindung prüfen
                         </Button>
                       </form>
+                      <TestMailForm
+                        accountId={account.id}
+                        defaultEmail={user.email}
+                        action={sendAccountTestMailAction}
+                      />
                       <AccountEditor
                         trigger="Bearbeiten"
                         account={{

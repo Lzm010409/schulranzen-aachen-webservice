@@ -1,6 +1,18 @@
--- Hilfsschema fuer den Import aus dem Altsystem.
+/**
+ * Hilfsschema fuer den Import aus dem Altsystem.
+ *
+ * Bewusst als Zeichenkette und nicht als .sql-Datei: der gebuendelte Server
+ * bringt keine Dateien aus dem Quellbaum mit, ein Lesen zur Laufzeit wuerde
+ * dort fehlschlagen.
+ *
+ * Der Dump des Vaadin-Systems wird in das Schema `legacy` eingespielt. Der
+ * Rohbestand bleibt danach zur Kontrolle liegen und wird nie veraendert.
+ * Die Spaltennamen entsprechen dem, was Hibernate 5.6 (Spring Boot 2.7) aus
+ * den Entities erzeugt hat.
+ */
+export const LEGACY_SCHEMA_SQL = `-- Hilfsschema fuer den Import aus dem Altsystem.
 --
--- Der Dump des Vaadin-Systems wird in das Schema `legacy` eingespielt. Der
+-- Der Dump des Vaadin-Systems wird in das Schema \`legacy\` eingespielt. Der
 -- Rohbestand bleibt danach zur Kontrolle liegen und wird nie veraendert.
 --
 -- Die Spaltennamen entsprechen dem, was Hibernate 5.6 (Spring Boot 2.7) aus
@@ -40,3 +52,4 @@ CREATE TABLE IF NOT EXISTS legacy.mail_template (
   body    text,
   html    boolean
 );
+`;

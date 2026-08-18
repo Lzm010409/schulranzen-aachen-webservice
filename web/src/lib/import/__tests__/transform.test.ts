@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { transform } from "./transform";
-import type { LegacyData } from "./read-legacy";
+import { transform } from "../transform";
+import type { LegacyData } from "../read-legacy";
 
 function legacy(overrides: Partial<LegacyData> = {}): LegacyData {
   return {
@@ -194,5 +194,111 @@ describe("ETL — Provider und Vorlagen", () => {
     );
     expect(result.templates[0].body).toContain("{{content}}");
     expect(result.templates[0].body).not.toContain("{Content}");
+  });
+});
+
+describe("ETL — Umstellung Produkt zu Kunde", () => {
+  it("macht aus je einer Altzeile genau einen Kauf", () => {
+    const result = transform(
+      legacy({
+        products: PRODUCTS,
+        // Bewusst verschiedene Personen: gleicher Name an gleicher Adresse
+        // gilt als dieselbe Person und wuerde zusammengefuehrt.
+        kunden: [
+          kunde(10, { mail: "a@example.de", productId: 1n }),
+          kunde(11, {
+            mail: "b@example.de",
+            nachname: "Zweiter",
+            adresse: "Nebenstr. 2",
+            productId: 3n,
+          }),
+        ],
+      }),
+    );
+    expect(result.customers).toHaveLength(2);
+    expect(result.stats.purchases).toBe(2);
+  });
+
+  it("haengt beide Kaeufe an denselben Kunden, wenn es dieselbe Person ist", () => {
+    const result = transform(
+      legacy({
+        products: PRODUCTS,
+        kunden: [
+          kunde(10, { mail: "anna@example.de", productId: 1n, kaufdatum: new Date("2023-08-14") }),
+          kunde(11, { mail: "anna@example.de", productId: 3n, kaufdatum: new Date("2025-08-01") }),
+        ],
+      }),
+    );
+    expect(result.customers).toHaveLength(1);
+    const [customer] = result.customers;
+    expect(customer.purchases).toHaveLength(2);
+    // Jeder Kauf behaelt die alte Zeilen-ID — daran haengt die Wiederholbarkeit.
+    expect(customer.purchases.map((p) => p.legacyKundeId).sort()).toEqual([10n, 11n]);
+    expect(customer.mergedLegacyIds.sort()).toEqual([10n, 11n]);
+  });
+
+  it("behaelt zwei Kaeufe desselben Produkts als zwei Kaeufe", () => {
+    const result = transform(
+      legacy({
+        products: PRODUCTS,
+        kunden: [
+          kunde(10, { mail: "anna@example.de", productId: 1n, kaufdatum: new Date("2023-08-14") }),
+          kunde(11, { mail: "anna@example.de", productId: 1n, kaufdatum: new Date("2024-08-14") }),
+        ],
+      }),
+    );
+    expect(result.customers).toHaveLength(1);
+    expect(result.customers[0].purchases).toHaveLength(2);
+  });
+
+  it("uebernimmt das Kaufdatum je Kauf, nicht je Kunde", () => {
+    const result = transform(
+      legacy({
+        products: PRODUCTS,
+        kunden: [
+          kunde(10, { mail: "anna@example.de", productId: 1n, kaufdatum: new Date("2023-08-14") }),
+          kunde(11, { mail: "anna@example.de", productId: 3n, kaufdatum: new Date("2025-08-01") }),
+        ],
+      }),
+    );
+    const dates = result.customers[0].purchases
+      .map((p) => p.purchasedAt?.toISOString().slice(0, 10))
+      .sort();
+    expect(dates).toEqual(["2023-08-14", "2025-08-01"]);
+  });
+
+  it("legt ohne Produkt und ohne Datum keinen Kauf an", () => {
+    const result = transform(
+      legacy({
+        products: PRODUCTS,
+        kunden: [kunde(10, { productId: null, kaufdatum: null })],
+      }),
+    );
+    expect(result.customers).toHaveLength(1);
+    expect(result.customers[0].purchases).toHaveLength(0);
+  });
+
+  it("zeigt die Umstellung im Mengengeruest", () => {
+    const result = transform(
+      legacy({
+        products: PRODUCTS,
+        kunden: [
+          kunde(10, { mail: "anna@example.de", productId: 1n }),
+          kunde(11, { mail: "anna@example.de", productId: 3n }),
+          kunde(12, {
+            mail: "bernd@example.de",
+            vorname: "Bernd",
+            nachname: "Schmitz",
+            adresse: "Marktplatz 3",
+            productId: 1n,
+          }),
+        ],
+      }),
+    );
+    // Drei Altzeilen werden zu zwei Kunden mit zusammen drei Kaeufen.
+    expect(result.stats.legacyKunden).toBe(3);
+    expect(result.stats.customers).toBe(2);
+    expect(result.stats.purchases).toBe(3);
+    expect(result.stats.mergedCustomers).toBe(1);
   });
 });

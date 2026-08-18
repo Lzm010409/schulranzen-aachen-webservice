@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rewriteDumpSql } from "./import";
+import { rewriteDumpSql } from "../legacy-import";
 
 describe("Dump-Umschreibung", () => {
   it("lenkt Tabellenverweise auf das Schema legacy", () => {
