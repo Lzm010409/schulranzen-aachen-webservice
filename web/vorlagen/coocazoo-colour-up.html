@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>coocazoo Colour Up Event</title>
+</head>
+<body style="margin:0;padding:0;background:#e9f5f3;font-family:Arial,Helvetica,sans-serif;color:#18181b">
+
+<!--
+  coocazoo Colour Up Event — Vorlage fuer den Mailversand.
+
+  Der Kampagnentext wird an der Stelle {{content}} eingesetzt.
+  Kommentare wie dieser werden beim Versand entfernt, sie erscheinen nur hier
+  im Editor.
+
+  Das Produktbild liegt unter public/bilder/ und ist damit unter der eigenen
+  Domain erreichbar. Fehlt es, bleibt der Platz farbig stehen und der
+  Alternativtext wird angezeigt — die Mail sieht auch dann vollstaendig aus.
+-->
+
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px">
+  Kostenloses Graffiti für Rucksack-Anhänger und Patch — jetzt Termin sichern.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e9f5f3">
+  <tr>
+    <td align="center" style="padding:24px 12px">
+
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden">
+
+        <!-- ============================================ Kopf: gruenes Band -->
+        <tr>
+          <td bgcolor="#00A08F" style="background:#00A08F;padding:28px 24px 24px">
+
+            <!-- Markenzeile -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="left">
+                  <span style="display:inline-block;background:#ffffff;color:#00A08F;font-size:17px;font-weight:bold;letter-spacing:.5px;padding:7px 16px;border-radius:20px">coocazoo</span>
+                </td>
+                <td align="right">
+                  <span style="display:inline-block;background:#111111;color:#ffffff;font-size:11px;font-weight:bold;letter-spacing:1.5px;padding:7px 12px;border-radius:4px">EVENT</span>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Titelblock -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px">
+              <tr>
+                <td bgcolor="#111111" align="center" style="background:#111111;border-radius:8px;padding:22px 16px 20px">
+                  <div style="font-size:40px;line-height:1.05;font-weight:bold;letter-spacing:1px;color:#ffffff;text-transform:uppercase">
+                    <span style="color:#3FD6C0">Col</span>our
+                    <span style="display:inline-block;background:#3FD6C0;color:#111111;padding:0 10px;border-radius:6px">Up</span>
+                  </div>
+                  <div style="margin-top:10px;font-size:13px;font-weight:bold;letter-spacing:4px;color:#ffffff;text-transform:uppercase">
+                    Powered by Molotow
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Produktbild -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px">
+              <tr>
+                <td bgcolor="#0C8B7C" align="center" style="background:#0C8B7C;border-radius:8px;padding:16px">
+                  <img src="https://schulranzen.gollenstede.app/bilder/coocazoo-colour-up.jpg"
+                       alt="coocazoo Rucksack mit selbst gestaltetem Anhaenger und Patch"
+                       width="520"
+                       style="display:block;width:100%;max-width:520px;height:auto;border-radius:6px;color:#ffffff;font-size:13px;line-height:1.5">
+                  <div style="padding-top:12px;font-size:14px;font-weight:bold;letter-spacing:.5px;color:#ffffff">
+                    Dein Rucksack. Dein Name. Dein Motiv.
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Aktionsknopf -->
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:22px auto 4px">
+              <tr>
+                <td bgcolor="#E4002B" align="center" style="background:#E4002B;border-radius:26px">
+                  <a href="https://schulranzen.gollenstede.app/termin"
+                     style="display:inline-block;padding:15px 34px;font-size:16px;font-weight:bold;letter-spacing:.5px;color:#ffffff;text-decoration:none;text-transform:uppercase">
+                    Jetzt Termin sichern
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- ==================================== Weisses Band mit der Zusage -->
+        <tr>
+          <td align="center" style="padding:24px 28px 20px;border-bottom:3px solid #00A08F">
+            <div style="font-size:20px;line-height:1.35;font-weight:bold;color:#00776A">
+              Kostenloses Graffiti für einen<br>Rucksack-Anhänger &amp; Patch!
+            </div>
+          </td>
+        </tr>
+
+        <!-- ================================================== Kampagnentext -->
+        <tr>
+          <td style="padding:28px 32px 8px;font-size:15px;line-height:1.65;color:#18181b">
+            <p style="margin:0 0 16px">{{anrede}},</p>
+            {{content}}
+          </td>
+        </tr>
+
+        <!-- ============================================= Ablauf in drei Schritten -->
+        <tr>
+          <td style="padding:8px 24px 4px">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="33%" valign="top" align="center" style="padding:8px">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr><td bgcolor="#F1FAF8" align="center" style="background:#F1FAF8;border-radius:10px;padding:16px 10px">
+                      <div style="font-size:22px;font-weight:bold;color:#00A08F">1</div>
+                      <div style="margin-top:6px;font-size:13px;line-height:1.45;color:#3f3f46">Termin<br>aussuchen</div>
+                    </td></tr>
+                  </table>
+                </td>
+                <td width="33%" valign="top" align="center" style="padding:8px">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr><td bgcolor="#F1FAF8" align="center" style="background:#F1FAF8;border-radius:10px;padding:16px 10px">
+                      <div style="font-size:22px;font-weight:bold;color:#00A08F">2</div>
+                      <div style="margin-top:6px;font-size:13px;line-height:1.45;color:#3f3f46">Name und<br>Motiv wählen</div>
+                    </td></tr>
+                  </table>
+                </td>
+                <td width="33%" valign="top" align="center" style="padding:8px">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr><td bgcolor="#F1FAF8" align="center" style="background:#F1FAF8;border-radius:10px;padding:16px 10px">
+                      <div style="font-size:22px;font-weight:bold;color:#00A08F">3</div>
+                      <div style="margin-top:6px;font-size:13px;line-height:1.45;color:#3f3f46">Vor Ort<br>sprühen lassen</div>
+                    </td></tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ======================================================= Abschluss -->
+        <tr>
+          <td style="padding:16px 32px 28px;font-size:15px;line-height:1.65;color:#18181b">
+            <p style="margin:0">Herzliche Grüße<br>Ihr Team von Schulranzen-Aachen</p>
+          </td>
+        </tr>
+
+        <!-- ========================================================== Fusszeile -->
+        <tr>
+          <td bgcolor="#111111" style="background:#111111;padding:22px 32px">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="font-size:12px;line-height:1.7;color:#a1a1aa">
+                  <strong style="color:#ffffff">Schulranzen-Aachen</strong><br>
+                  Musterstraße 1 · 52062 Aachen · Telefon 0241 123456
+                </td>
+                <td align="right" valign="top" style="font-size:11px;letter-spacing:1px;color:#71717a;text-transform:uppercase">
+                  powered by<br><strong style="color:#ffffff">Molotow</strong>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2" style="padding-top:14px;font-size:11px;color:#71717a">
+                  Keine weiteren E-Mails? <a href="{{abmeldelink}}" style="color:#a1a1aa">Hier abmelden</a>.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

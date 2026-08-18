@@ -16,7 +16,8 @@
     "seed": "tsx scripts/seed.ts",
     "etl:import": "tsx scripts/etl/import.ts",
     "testdaten": "tsx scripts/testdaten.ts",
-    "beispieldaten": "tsx scripts/beispieldaten.ts"
+    "beispieldaten": "tsx scripts/beispieldaten.ts",
+    "vorlage:vorschau": "tsx scripts/vorlage-vorschau.ts"
   },
   "prisma": {
     "seed": "tsx scripts/seed.ts"

@@ -66,6 +66,32 @@ Spalten *Warengruppe*, *Modelljahr* und *Saison*, die Übernahme aus dem
 Altsystem über das Kaufdatum — dort gab es die Angaben nicht, die Saison
 entsteht trotzdem rückwirkend für den gesamten Bestand.
 
+## Mitgelieferte Vorlagen
+
+Unter [`vorlagen/`](./vorlagen/) liegen fertige Mail-Layouts zum Einfügen unter
+**Vorlagen → Vorlage anlegen**. Sie sind auf E-Mail-Verhältnisse gebaut:
+Tabellenlayout, Inline-Styles, keine Abhängigkeit von `<style>` oder
+Hintergrundbildern, und sie überstehen die Sanitisierung unverändert — das ist
+in `src/lib/__tests__/vorlage-coocazoo.test.ts` festgehalten.
+
+| Vorlage | Wofür |
+| --- | --- |
+| `coocazoo-colour-up.html` | Aktionsmail zum Colour-Up-Event: grünes Kopfband, Titelblock, Bildfläche, roter Terminknopf, Ablauf in drei Schritten |
+
+Bilder gehören nach `public/bilder/` und sind dann unter der eigenen Domain
+erreichbar. Fehlt ein Bild, bleibt die Fläche farbig stehen und der
+Alternativtext erscheint — die Mail sieht auch dann vollständig aus.
+
+So sieht eine Vorlage aus, bevor sie verschickt wird:
+
+```bash
+npm run vorlage:vorschau -- vorlagen/coocazoo-colour-up.html vorschau.html
+```
+
+Das läuft durch dieselbe Strecke wie eine echte Mail — Platzhalter füllen,
+sanitisieren, Abmeldelink prüfen. Was dabei herauskommt, ist genau das, was
+der Empfänger bekommt.
+
 ## Rückmeldung und Ladezustand
 
 Jede Änderung meldet sich: gespeichert, angelegt, gelöscht, wiederhergestellt,
@@ -155,7 +181,7 @@ openssl rand -base64 32       # für ENCRYPTION_KEY (muss genau 32 Byte sein)
 ## Tests
 
 ```bash
-npm test                      # 129 Tests: Normalisierung, Mailaufbau, Export,
+npm test                      # 137 Tests: Normalisierung, Mailaufbau, Export,
                               # SMTP-Fehler, Rechte, Import, Versandstrecke
 npm run typecheck
 
@@ -224,6 +250,7 @@ scripts/
   feedback-check.mjs      prüft Rückmeldungen und Ladezustand
   kategorie-check.mjs     prüft Warengruppen und Saison
   gross-check.mjs         Import mit 12.600 Zeilen am laufenden System
+  vorlage-vorschau.ts     rendert eine Vorlage wie beim Versand
   etl/import.ts           Übernahme aus dem Altsystem (Kommandozeile)
 ```
 
