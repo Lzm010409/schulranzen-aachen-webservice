@@ -14,6 +14,10 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteAlias;
 import lukegoll.schulranzen.aachen.webservices.views.MainLayout;
+import org.springframework.beans.factory.annotation.Value;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @PageTitle("Home")
 @Route(value = "home", layout = MainLayout.class)
@@ -23,22 +27,43 @@ public class HomeView extends HorizontalLayout {
     private TextField name;
     private Button sayHello;
 
-    public HomeView() {
-        Span name = new Span("Luke Gollenstede");
-        Span email = new Span("lukegollenstede@gmail.com");
-        Span phone = new Span("+49 1575 1405748");
-
-        VerticalLayout content = new VerticalLayout(name, email, phone);
-        content.setSpacing(false);
-        content.setPadding(false);
-
-        Details details = new Details("Bei Fragen", content);
-        details.setOpened(true);
+    /**
+     * Die Kontaktangaben standen frueher fest im Quelltext. Sie kommen jetzt aus
+     * der Konfiguration, damit im Repository keine personenbezogenen Daten
+     * liegen. Sind sie nicht gesetzt, entfaellt der Abschnitt.
+     */
+    public HomeView(
+            @Value("${app.support.name:}") String supportName,
+            @Value("${app.support.email:}") String supportEmail,
+            @Value("${app.support.phone:}") String supportPhone) {
 
         H1 title = new H1("Auf den folgenden Seiten können Sie die Kunden-Daten angeben und Mails versenden");
 
-        VerticalLayout verticalLayout = new VerticalLayout(title, details);
+        VerticalLayout verticalLayout = new VerticalLayout(title);
+
+        List<Span> contactLines = new ArrayList<>();
+        addIfPresent(contactLines, supportName);
+        addIfPresent(contactLines, supportEmail);
+        addIfPresent(contactLines, supportPhone);
+
+        if (!contactLines.isEmpty()) {
+            VerticalLayout content = new VerticalLayout();
+            content.setSpacing(false);
+            content.setPadding(false);
+            contactLines.forEach(content::add);
+
+            Details details = new Details("Bei Fragen", content);
+            details.setOpened(true);
+            verticalLayout.add(details);
+        }
+
         add(verticalLayout);
+    }
+
+    private static void addIfPresent(List<Span> target, String value) {
+        if (value != null && !value.trim().isEmpty()) {
+            target.add(new Span(value.trim()));
+        }
     }
 
 }
