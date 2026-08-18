@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import { campaignSchema, fieldErrors } from "@/lib/validation";
 import { customerFilterSchema } from "@/lib/customer-filter";
@@ -32,7 +32,7 @@ export async function createCampaignAction(
   _prev: CampaignFormState,
   formData: FormData,
 ): Promise<CampaignFormState> {
-  const user = await requireUser();
+  const user = await requirePermission("kampagnen.erstellen");
 
   const parsed = campaignSchema.safeParse({
     name: formData.get("name") ?? "",
@@ -119,7 +119,7 @@ export async function createCampaignAction(
 export async function sendTestMailAction(
   formData: FormData,
 ): Promise<void> {
-  const user = await requireUser();
+  const user = await requirePermission("kampagnen.erstellen");
   const campaignId = String(formData.get("campaignId") ?? "");
   const to = String(formData.get("testEmail") ?? "").trim();
   if (!campaignId || !to) return;
@@ -212,7 +212,8 @@ export async function sendTestMailAction(
 
 /** Gibt die Kampagne frei — ab hier arbeitet der Worker sie ab. */
 export async function startCampaignAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  // Erst dieses Recht laesst tatsaechlich Mails hinausgehen.
+  const user = await requirePermission("kampagnen.senden");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
@@ -240,7 +241,7 @@ export async function startCampaignAction(formData: FormData): Promise<void> {
 }
 
 export async function pauseCampaignAction(formData: FormData): Promise<void> {
-  await requireUser();
+  await requirePermission("kampagnen.senden");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.campaign.update({ where: { id }, data: { status: "PAUSED" } });
@@ -248,7 +249,7 @@ export async function pauseCampaignAction(formData: FormData): Promise<void> {
 }
 
 export async function resumeCampaignAction(formData: FormData): Promise<void> {
-  await requireUser();
+  await requirePermission("kampagnen.senden");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.campaign.update({ where: { id }, data: { status: "SENDING" } });
@@ -256,7 +257,7 @@ export async function resumeCampaignAction(formData: FormData): Promise<void> {
 }
 
 export async function cancelCampaignAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requirePermission("kampagnen.senden");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
@@ -282,7 +283,7 @@ export async function cancelCampaignAction(formData: FormData): Promise<void> {
 }
 
 export async function retryFailedAction(formData: FormData): Promise<void> {
-  await requireUser();
+  await requirePermission("kampagnen.senden");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const count = await retryFailed(id);
@@ -291,7 +292,7 @@ export async function retryFailedAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteCampaignAction(formData: FormData): Promise<void> {
-  await requireUser();
+  await requirePermission("kampagnen.erstellen");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const campaign = await db.campaign.findUnique({ where: { id } });

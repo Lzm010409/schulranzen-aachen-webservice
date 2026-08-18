@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermissionOrRedirect } from "@/lib/auth";
 import {
   Badge,
   Card,
@@ -16,7 +16,7 @@ export const metadata = { title: "Vorlagen" };
 export const dynamic = "force-dynamic";
 
 export default async function TemplatesPage() {
-  await requireUser();
+  await requirePermissionOrRedirect("vorlagen.ansehen");
 
   const templates = await db.mailTemplate.findMany({
     where: { deletedAt: null },
@@ -27,7 +27,6 @@ export default async function TemplatesPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        title="E-Mail-Vorlagen"
         description="Wiederverwendbare Layouts. Der Kampagnentext wird an der Stelle {{content}} eingesetzt."
         actions={
           <LinkButton href="/vorlagen/neu" variant="primary">

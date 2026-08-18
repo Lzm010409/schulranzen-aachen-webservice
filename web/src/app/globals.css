@@ -1,18 +1,110 @@
 @import "tailwindcss";
 
-@theme {
-  --color-brand-50: oklch(0.97 0.02 250);
-  --color-brand-100: oklch(0.93 0.04 250);
-  --color-brand-500: oklch(0.58 0.16 250);
-  --color-brand-600: oklch(0.51 0.16 250);
-  --color-brand-700: oklch(0.44 0.14 250);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-}
+/*
+ * Optik der alten Vaadin-Anwendung (Lumo-Theme), nachgebaut in CSS.
+ * Die Farb-, Abstands- und Groessenwerte entsprechen den Lumo-Variablen aus
+ * Vaadin 23, damit die Oberflaeche fuer die Anwender vertraut bleibt.
+ */
 
 :root {
+  /* Grundfarben */
+  --lumo-base-color: #fff;
+  --lumo-shade: hsl(214, 35%, 15%);
+  --lumo-shade-90pct: hsla(214, 35%, 15%, 0.94);
+  --lumo-shade-80pct: hsla(214, 35%, 15%, 0.85);
+  --lumo-shade-70pct: hsla(214, 35%, 15%, 0.72);
+  --lumo-shade-60pct: hsla(214, 35%, 15%, 0.54);
+  --lumo-shade-50pct: hsla(214, 35%, 15%, 0.42);
+  --lumo-shade-40pct: hsla(214, 35%, 15%, 0.32);
+  --lumo-shade-30pct: hsla(214, 35%, 15%, 0.24);
+  --lumo-shade-20pct: hsla(214, 35%, 15%, 0.16);
+  --lumo-shade-10pct: hsla(214, 35%, 15%, 0.1);
+  --lumo-shade-5pct: hsla(214, 35%, 15%, 0.05);
+
+  --lumo-contrast-90pct: var(--lumo-shade-90pct);
+  --lumo-contrast-80pct: var(--lumo-shade-80pct);
+  --lumo-contrast-70pct: var(--lumo-shade-70pct);
+  --lumo-contrast-60pct: var(--lumo-shade-60pct);
+  --lumo-contrast-50pct: var(--lumo-shade-50pct);
+  --lumo-contrast-40pct: var(--lumo-shade-40pct);
+  --lumo-contrast-30pct: var(--lumo-shade-30pct);
+  --lumo-contrast-20pct: var(--lumo-shade-20pct);
+  --lumo-contrast-10pct: var(--lumo-shade-10pct);
+  --lumo-contrast-5pct: var(--lumo-shade-5pct);
+
+  --lumo-primary-color: hsl(214, 90%, 52%);
+  --lumo-primary-color-50pct: hsla(214, 90%, 52%, 0.5);
+  --lumo-primary-color-10pct: hsla(214, 90%, 52%, 0.1);
+  --lumo-primary-text-color: hsl(214, 90%, 52%);
+  --lumo-primary-contrast-color: #fff;
+
+  --lumo-error-color: hsl(3, 85%, 48%);
+  --lumo-error-color-50pct: hsla(3, 85%, 49%, 0.5);
+  --lumo-error-color-10pct: hsla(3, 85%, 49%, 0.1);
+  --lumo-error-text-color: hsl(3, 89%, 42%);
+  --lumo-error-contrast-color: #fff;
+
+  --lumo-success-color: hsl(145, 72%, 30%);
+  --lumo-success-color-50pct: hsla(145, 72%, 31%, 0.5);
+  --lumo-success-color-10pct: hsla(145, 72%, 31%, 0.1);
+  --lumo-success-text-color: hsl(145, 100%, 32%);
+  --lumo-success-contrast-color: #fff;
+
+  --lumo-warning-color: hsl(45, 100%, 60%);
+  --lumo-warning-color-10pct: hsla(45, 100%, 60%, 0.25);
+  --lumo-warning-text-color: hsl(30, 89%, 42%);
+
+  /* Text */
+  --lumo-header-text-color: hsl(214, 35%, 15%);
+  --lumo-body-text-color: hsla(214, 40%, 16%, 0.94);
+  --lumo-secondary-text-color: hsla(214, 42%, 18%, 0.69);
+  --lumo-tertiary-text-color: hsla(214, 45%, 20%, 0.52);
+  --lumo-disabled-text-color: hsla(214, 50%, 22%, 0.26);
+
+  /* Masse */
+  --lumo-size-xs: 1.625rem;
+  --lumo-size-s: 1.875rem;
+  --lumo-size-m: 2.25rem;
+  --lumo-size-l: 2.75rem;
+  --lumo-size-xl: 3.5rem;
+
+  --lumo-space-xs: 0.25rem;
+  --lumo-space-s: 0.5rem;
+  --lumo-space-m: 1rem;
+  --lumo-space-l: 1.5rem;
+  --lumo-space-xl: 2.5rem;
+
+  --lumo-border-radius-s: 0.25em;
+  --lumo-border-radius-m: 0.25em;
+  --lumo-border-radius-l: 0.5em;
+
+  --lumo-box-shadow-xs: 0 1px 4px -1px var(--lumo-shade-50pct);
+  --lumo-box-shadow-s: 0 1px 2px 0 var(--lumo-shade-20pct),
+    0 2px 8px -2px var(--lumo-shade-40pct);
+  --lumo-box-shadow-m: 0 2px 6px -1px var(--lumo-shade-20pct),
+    0 8px 24px -4px var(--lumo-shade-40pct);
+
+  /* Schrift */
+  --lumo-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+  --lumo-font-size-xxs: 0.75rem;
+  --lumo-font-size-xs: 0.8125rem;
+  --lumo-font-size-s: 0.875rem;
+  --lumo-font-size-m: 1rem;
+  --lumo-font-size-l: 1.125rem;
+  --lumo-font-size-xl: 1.375rem;
+  --lumo-font-size-xxl: 1.75rem;
+  --lumo-font-size-xxxl: 2.5rem;
+  --lumo-line-height-xs: 1.25;
+  --lumo-line-height-s: 1.375;
+  --lumo-line-height-m: 1.625;
+
+  --app-drawer-width: 16em;
+
   color-scheme: light;
 }
+
+/* ------------------------------------------------------------- Grundgeruest */
 
 html,
 body {
@@ -20,54 +112,735 @@ body {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  margin: 0;
+  background: var(--lumo-base-color);
+  color: var(--lumo-body-text-color);
+  font-family: var(--lumo-font-family);
+  font-size: var(--lumo-font-size-m);
+  line-height: var(--lumo-line-height-m);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ------------------------------------------------------------ Bausteine */
-
-@utility card {
-  @apply rounded-lg border border-slate-200 bg-white shadow-sm;
+h1,
+h2,
+h3,
+h4 {
+  color: var(--lumo-header-text-color);
+  font-weight: 600;
+  line-height: var(--lumo-line-height-xs);
+  margin: 0;
 }
 
-@utility label-text {
-  @apply mb-1 block text-sm font-medium text-slate-700;
+a {
+  color: var(--lumo-primary-text-color);
+  text-decoration: none;
 }
 
-@utility field {
-  @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm
-    shadow-sm outline-none transition
-    placeholder:text-slate-400
-    focus:border-brand-500 focus:ring-2 focus:ring-brand-100
-    disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500;
+a:hover {
+  text-decoration: underline;
 }
 
-@utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2
-    text-sm font-medium transition select-none
-    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500
-    disabled:cursor-not-allowed disabled:opacity-50;
+/* --------------------------------------------------------------- App-Layout */
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
 }
 
-@utility btn-primary {
-  @apply bg-brand-600 text-white hover:bg-brand-700;
+/* Schublade links, wie vaadin-app-layout mit primary-section="drawer" */
+.app-drawer {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 20;
+  display: flex;
+  width: var(--app-drawer-width);
+  flex-direction: column;
+  background: var(--lumo-shade-5pct);
+  box-shadow: 1px 0 0 0 var(--lumo-contrast-10pct);
+  transition: transform 0.2s ease;
 }
 
-@utility btn-secondary {
-  @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+.app-drawer-header {
+  display: flex;
+  min-height: var(--lumo-size-xl);
+  box-sizing: border-box;
+  align-items: center;
+  gap: var(--lumo-space-s);
+  padding: var(--lumo-space-s) var(--lumo-space-m);
 }
 
-@utility btn-danger {
-  @apply bg-red-600 text-white hover:bg-red-700;
+.app-drawer-title {
+  font-size: var(--lumo-font-size-l);
+  font-weight: 600;
+  margin: 0;
+  color: var(--lumo-header-text-color);
 }
 
-@utility btn-ghost {
-  @apply text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+.app-drawer-scroller {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--lumo-space-s);
+  border-top: 1px solid var(--lumo-contrast-10pct);
 }
 
-@utility badge {
-  @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+.app-drawer-footer {
+  padding: var(--lumo-space-s) var(--lumo-space-m);
+  border-top: 1px solid var(--lumo-contrast-10pct);
+  font-size: var(--lumo-font-size-xs);
+  color: var(--lumo-secondary-text-color);
 }
 
-@utility table-cell-compact {
-  @apply px-3 py-2 text-sm;
+/* Navigationseintraege wie vcf-nav-item */
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--lumo-space-s);
+  padding: var(--lumo-space-xs) var(--lumo-space-s);
+  min-height: var(--lumo-size-m);
+  box-sizing: border-box;
+  border-radius: var(--lumo-border-radius-m);
+  color: var(--lumo-body-text-color);
+  font-size: var(--lumo-font-size-m);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.app-nav-item:hover {
+  background: var(--lumo-contrast-5pct);
+  text-decoration: none;
+}
+
+.app-nav-item[aria-current="page"] {
+  background: var(--lumo-primary-color-10pct);
+  color: var(--lumo-primary-text-color);
+}
+
+.app-nav-icon {
+  display: inline-flex;
+  width: var(--lumo-size-xs);
+  justify-content: center;
+  color: var(--lumo-contrast-60pct);
+  flex: none;
+}
+
+.app-nav-item[aria-current="page"] .app-nav-icon {
+  color: var(--lumo-primary-text-color);
+}
+
+/* Navigationsleiste oben */
+.app-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  margin-left: var(--app-drawer-width);
+}
+
+.app-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  min-height: var(--lumo-size-xl);
+  align-items: center;
+  gap: var(--lumo-space-m);
+  padding: 0 var(--lumo-space-m);
+  background: var(--lumo-base-color);
+  box-shadow: 0 1px 0 0 var(--lumo-contrast-10pct);
+}
+
+.app-view-title {
+  font-size: var(--lumo-font-size-l);
+  font-weight: 600;
+  margin: 0;
+}
+
+.app-navbar-spacer {
+  margin-left: auto;
+}
+
+.app-user {
+  font-size: var(--lumo-font-size-s);
+  color: var(--lumo-secondary-text-color);
+}
+
+.app-content {
+  flex: 1;
+  padding: var(--lumo-space-m);
+}
+
+.drawer-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--lumo-size-m);
+  height: var(--lumo-size-m);
+  border: 0;
+  border-radius: var(--lumo-border-radius-m);
+  background: transparent;
+  color: var(--lumo-secondary-text-color);
+  cursor: pointer;
+}
+
+.drawer-toggle:hover {
+  background: var(--lumo-contrast-5pct);
+}
+
+.drawer-backdrop {
+  display: none;
+}
+
+/* Unter 1024 px klappt die Schublade weg — wie das Overlay-Verhalten von Vaadin */
+@media (max-width: 1023px) {
+  .drawer-toggle {
+    display: inline-flex;
+  }
+
+  .app-main {
+    margin-left: 0;
+  }
+
+  .app-drawer {
+    transform: translateX(-100%);
+    box-shadow: var(--lumo-box-shadow-m);
+  }
+
+  .app-layout[data-drawer="open"] .app-drawer {
+    transform: none;
+  }
+
+  .app-layout[data-drawer="open"] .drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    display: block;
+    background: var(--lumo-shade-20pct);
+    border: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ Buttons */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lumo-space-xs);
+  height: var(--lumo-size-m);
+  padding: 0 calc(var(--lumo-size-m) / 3 + var(--lumo-border-radius-m) / 2);
+  border: 0;
+  border-radius: var(--lumo-border-radius-m);
+  background: var(--lumo-contrast-5pct);
+  color: var(--lumo-primary-text-color);
+  font-family: inherit;
+  font-size: var(--lumo-font-size-m);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.btn:hover {
+  background: var(--lumo-contrast-10pct);
+  text-decoration: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--lumo-primary-color-50pct);
+  outline-offset: 1px;
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  background: var(--lumo-contrast-5pct);
+  color: var(--lumo-disabled-text-color);
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--lumo-primary-color);
+  color: var(--lumo-primary-contrast-color);
+}
+
+.btn-primary:hover {
+  background: hsl(214, 90%, 48%);
+}
+
+.btn-primary:disabled {
+  background: var(--lumo-primary-color-50pct);
+  color: var(--lumo-primary-contrast-color);
+}
+
+.btn-error {
+  background: var(--lumo-error-color-10pct);
+  color: var(--lumo-error-text-color);
+}
+
+.btn-error:hover {
+  background: var(--lumo-error-color-50pct);
+  color: var(--lumo-error-contrast-color);
+}
+
+.btn-tertiary {
+  background: transparent;
+  color: var(--lumo-primary-text-color);
+  padding: 0 var(--lumo-space-s);
+}
+
+.btn-tertiary:hover {
+  background: var(--lumo-primary-color-10pct);
+}
+
+.btn-small {
+  height: var(--lumo-size-s);
+  font-size: var(--lumo-font-size-s);
+}
+
+/* ---------------------------------------------------------------- Formulare */
+
+.field-label {
+  display: block;
+  padding-bottom: var(--lumo-space-xs);
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-s);
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.field-control {
+  width: 100%;
+  min-height: var(--lumo-size-m);
+  box-sizing: border-box;
+  padding: 0 var(--lumo-space-s);
+  border: 0;
+  border-radius: var(--lumo-border-radius-m);
+  background: var(--lumo-contrast-10pct);
+  color: var(--lumo-body-text-color);
+  font-family: inherit;
+  font-size: var(--lumo-font-size-m);
+  line-height: var(--lumo-size-m);
+}
+
+textarea.field-control {
+  padding: var(--lumo-space-s);
+  line-height: var(--lumo-line-height-m);
+  resize: vertical;
+}
+
+select.field-control {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--lumo-contrast-60pct) 50%),
+    linear-gradient(135deg, var(--lumo-contrast-60pct) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: var(--lumo-space-xl);
+}
+
+.field-control::placeholder {
+  color: var(--lumo-tertiary-text-color);
+}
+
+.field-control:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--lumo-primary-color-50pct);
+}
+
+.field-control:disabled {
+  background: var(--lumo-contrast-5pct);
+  color: var(--lumo-disabled-text-color);
+  cursor: not-allowed;
+}
+
+.field-control[aria-invalid="true"] {
+  box-shadow: 0 0 0 2px var(--lumo-error-color-50pct);
+}
+
+.field-hint {
+  padding-top: var(--lumo-space-xs);
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-xs);
+  line-height: var(--lumo-line-height-xs);
+}
+
+.field-error {
+  padding-top: var(--lumo-space-xs);
+  color: var(--lumo-error-text-color);
+  font-size: var(--lumo-font-size-xs);
+  line-height: var(--lumo-line-height-xs);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--lumo-space-s);
+  padding: var(--lumo-space-xs) 0;
+  font-size: var(--lumo-font-size-m);
+  cursor: pointer;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.1875rem;
+  flex: none;
+  accent-color: var(--lumo-primary-color);
+  cursor: pointer;
+}
+
+.form-grid {
+  display: grid;
+  gap: var(--lumo-space-m);
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+/* ------------------------------------------------------------------- Karten */
+
+.card {
+  border: 1px solid var(--lumo-contrast-10pct);
+  border-radius: var(--lumo-border-radius-l);
+  background: var(--lumo-base-color);
+}
+
+.card-header {
+  padding: var(--lumo-space-m);
+  border-bottom: 1px solid var(--lumo-contrast-10pct);
+}
+
+.card-title {
+  font-size: var(--lumo-font-size-l);
+  font-weight: 600;
+}
+
+.card-description {
+  margin-top: var(--lumo-space-xs);
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-s);
+}
+
+.card-body {
+  padding: var(--lumo-space-m);
+}
+
+.card-footer {
+  padding: var(--lumo-space-s) var(--lumo-space-m);
+  border-top: 1px solid var(--lumo-contrast-10pct);
+  background: var(--lumo-contrast-5pct);
+  border-radius: 0 0 var(--lumo-border-radius-l) var(--lumo-border-radius-l);
+}
+
+/* ------------------------------------------------------------------ Tabellen */
+
+.grid-wrapper {
+  overflow-x: auto;
+}
+
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--lumo-font-size-m);
+}
+
+table.grid th {
+  padding: var(--lumo-space-xs) var(--lumo-space-m);
+  border-bottom: 1px solid var(--lumo-contrast-20pct);
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-s);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+table.grid td {
+  padding: var(--lumo-space-xs) var(--lumo-space-m);
+  border-bottom: 1px solid var(--lumo-contrast-10pct);
+  min-height: var(--lumo-size-l);
+}
+
+table.grid tbody tr:hover {
+  background: var(--lumo-contrast-5pct);
+}
+
+table.grid a {
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------- Meldungen, Badges */
+
+.alert {
+  padding: var(--lumo-space-s) var(--lumo-space-m);
+  border-radius: var(--lumo-border-radius-m);
+  font-size: var(--lumo-font-size-s);
+  line-height: var(--lumo-line-height-s);
+}
+
+.alert-title {
+  font-weight: 600;
+}
+
+.alert-info {
+  background: var(--lumo-primary-color-10pct);
+  color: var(--lumo-primary-text-color);
+}
+
+.alert-success {
+  background: var(--lumo-success-color-10pct);
+  color: var(--lumo-success-text-color);
+}
+
+.alert-warning {
+  background: var(--lumo-warning-color-10pct);
+  color: var(--lumo-warning-text-color);
+}
+
+.alert-error {
+  background: var(--lumo-error-color-10pct);
+  color: var(--lumo-error-text-color);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4em calc(0.5em + var(--lumo-border-radius-s) / 4);
+  border-radius: var(--lumo-border-radius-s);
+  background: var(--lumo-contrast-5pct);
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-s);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.badge-success {
+  background: var(--lumo-success-color-10pct);
+  color: var(--lumo-success-text-color);
+}
+
+.badge-error {
+  background: var(--lumo-error-color-10pct);
+  color: var(--lumo-error-text-color);
+}
+
+.badge-warning {
+  background: var(--lumo-warning-color-10pct);
+  color: var(--lumo-warning-text-color);
+}
+
+.badge-primary {
+  background: var(--lumo-primary-color-10pct);
+  color: var(--lumo-primary-text-color);
+}
+
+/* ------------------------------------------------------------------ Dialoge */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: var(--lumo-space-m);
+  background: var(--lumo-shade-20pct);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 28rem;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: var(--lumo-border-radius-l);
+  background: var(--lumo-base-color);
+  box-shadow: var(--lumo-box-shadow-m);
+}
+
+.dialog-wide {
+  max-width: 44rem;
+}
+
+.dialog-title {
+  padding: var(--lumo-space-m);
+  border-bottom: 1px solid var(--lumo-contrast-10pct);
+  font-size: var(--lumo-font-size-l);
+  font-weight: 600;
+}
+
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lumo-space-m);
+  padding: var(--lumo-space-m);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--lumo-space-s);
+  padding-top: var(--lumo-space-s);
+  border-top: 1px solid var(--lumo-contrast-10pct);
+}
+
+/* ------------------------------------------------------------------- Rechte */
+
+.permissions {
+  margin: 0;
+  padding: var(--lumo-space-m);
+  border: 1px solid var(--lumo-contrast-10pct);
+  border-radius: var(--lumo-border-radius-m);
+}
+
+.permissions legend {
+  padding: 0 var(--lumo-space-xs);
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-s);
+  font-weight: 500;
+}
+
+.permission-groups {
+  display: grid;
+  gap: var(--lumo-space-m);
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  margin-top: var(--lumo-space-s);
+}
+
+.permission-group h3 {
+  margin-bottom: var(--lumo-space-xs);
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.permission-hint {
+  display: block;
+  color: var(--lumo-tertiary-text-color);
+  font-size: var(--lumo-font-size-xs);
+  font-style: normal;
+  line-height: var(--lumo-line-height-xs);
+}
+
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lumo-space-xs);
+  margin-bottom: var(--lumo-space-s);
+}
+
+.preset-label {
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-s);
+}
+
+.preset-button {
+  padding: 0.25rem var(--lumo-space-s);
+  border: 1px solid var(--lumo-contrast-20pct);
+  border-radius: var(--lumo-border-radius-m);
+  background: var(--lumo-base-color);
+  color: var(--lumo-body-text-color);
+  font-family: inherit;
+  font-size: var(--lumo-font-size-xs);
+  cursor: pointer;
+}
+
+.preset-button:hover {
+  background: var(--lumo-contrast-5pct);
+}
+
+.permission-count {
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-xs);
+}
+
+/* --------------------------------------------------------------- Werkzeuge */
+
+.view-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--lumo-space-m);
+  margin-bottom: var(--lumo-space-m);
+}
+
+.view-title {
+  font-size: var(--lumo-font-size-xxl);
+  font-weight: 600;
+}
+
+.view-description {
+  margin-top: var(--lumo-space-xs);
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-s);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--lumo-space-s);
+}
+
+.stat-card {
+  padding: var(--lumo-space-m);
+  border: 1px solid var(--lumo-contrast-10pct);
+  border-radius: var(--lumo-border-radius-l);
+  background: var(--lumo-base-color);
+}
+
+.stat-label {
+  color: var(--lumo-secondary-text-color);
+  font-size: var(--lumo-font-size-s);
+}
+
+.stat-value {
+  margin-top: var(--lumo-space-xs);
+  color: var(--lumo-header-text-color);
+  font-size: var(--lumo-font-size-xxl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.stat-hint {
+  color: var(--lumo-tertiary-text-color);
+  font-size: var(--lumo-font-size-xs);
+}
+
+.muted {
+  color: var(--lumo-secondary-text-color);
+}
+
+.subtle {
+  color: var(--lumo-tertiary-text-color);
+  font-size: var(--lumo-font-size-xs);
+}
+
+.empty-state {
+  padding: var(--lumo-space-xl) var(--lumo-space-m);
+  text-align: center;
+  color: var(--lumo-secondary-text-color);
+}
+
+/* Fuer Login und Abmeldeseite */
+.centered-page {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: var(--lumo-space-m);
+  background: var(--lumo-shade-5pct);
 }

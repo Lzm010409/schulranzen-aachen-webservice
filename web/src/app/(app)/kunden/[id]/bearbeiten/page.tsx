@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermissionOrRedirect } from "@/lib/auth";
 import { PageHeader, toDateInput } from "@/components/ui";
 import { CustomerForm } from "../../customer-form";
 
@@ -12,7 +12,7 @@ export default async function EditCustomerPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireUser();
+  await requirePermissionOrRedirect("kunden.bearbeiten");
   const { id } = await params;
 
   const [customer, products] = await Promise.all([

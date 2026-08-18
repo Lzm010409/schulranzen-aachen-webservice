@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermissionOrRedirect } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import {
   Badge,
   Button,
@@ -17,7 +18,8 @@ export const metadata = { title: "Produkte" };
 export const dynamic = "force-dynamic";
 
 export default async function ProductsPage() {
-  await requireUser();
+  const user = await requirePermissionOrRedirect("produkte.ansehen");
+  const mayManage = can(user, "produkte.verwalten");
 
   const products = await db.product.findMany({
     orderBy: [{ active: "desc" }, { name: "asc" }],
@@ -27,7 +29,6 @@ export default async function ProductsPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
-        title="Produkte"
         description="Der Katalog hinter den Käufen. Gleiche Namen werden über einen normalisierten Schlüssel zusammengehalten."
       />
 
@@ -82,6 +83,7 @@ export default async function ProductsPage() {
                         )}
                       </Td>
                       <Td className="text-right">
+                        {mayManage ? (
                         <div className="flex justify-end gap-1">
                           <ProductEditor
                             trigger="Bearbeiten"
@@ -99,13 +101,14 @@ export default async function ProductsPage() {
                               name="id"
                               value={product.id}
                             />
-                            <Button type="submit" variant="ghost">
+                            <Button type="submit" variant="tertiary">
                               {product._count.purchases > 0
                                 ? "Deaktivieren"
                                 : "Löschen"}
                             </Button>
                           </form>
                         </div>
+                        ) : null}
                       </Td>
                     </tr>
                   ))}
@@ -115,6 +118,7 @@ export default async function ProductsPage() {
           </Card>
         </div>
 
+        {mayManage ? (
         <div className="space-y-6">
           <Card title="Neues Produkt">
             <ProductEditor
@@ -137,6 +141,7 @@ export default async function ProductsPage() {
             />
           </Card>
         </div>
+        ) : null}
       </div>
     </div>
   );

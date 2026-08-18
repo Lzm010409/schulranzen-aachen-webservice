@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermissionOrRedirect } from "@/lib/auth";
 import {
   Badge,
   Card,
@@ -27,7 +27,7 @@ const STATUS: Record<
 };
 
 export default async function CampaignsPage() {
-  await requireUser();
+  await requirePermissionOrRedirect("kampagnen.ansehen");
 
   const campaigns = await db.campaign.findMany({
     orderBy: { createdAt: "desc" },
@@ -60,7 +60,6 @@ export default async function CampaignsPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
-        title="Mailversand"
         description="Jede Kampagne behält ihr vollständiges Versandprotokoll."
         actions={
           <LinkButton href="/kunden" variant="primary">

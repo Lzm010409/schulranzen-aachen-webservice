@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermissionOrRedirect } from "@/lib/auth";
 import { Alert, LinkButton, PageHeader } from "@/components/ui";
 import { buildWhere, describeFilter, parseFilter } from "@/lib/customer-filter";
 import { CampaignForm } from "../campaign-form";
@@ -12,7 +12,7 @@ export default async function NewCampaignPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireUser();
+  await requirePermissionOrRedirect("kampagnen.erstellen");
   const params = await searchParams;
 
   const source = params.quelle === "filter" ? "filter" : "auswahl";

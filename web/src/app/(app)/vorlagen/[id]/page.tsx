@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermissionOrRedirect } from "@/lib/auth";
 import {
   Alert,
   Button,
@@ -24,7 +24,7 @@ export default async function TemplateDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  await requireUser();
+  await requirePermissionOrRedirect("vorlagen.verwalten");
   const { id } = await params;
   const flags = await searchParams;
 
@@ -50,7 +50,7 @@ export default async function TemplateDetailPage({
             </form>
             <form action={deleteTemplateAction}>
               <input type="hidden" name="id" value={template.id} />
-              <Button type="submit" variant="danger">
+              <Button type="submit" variant="error">
                 Löschen
               </Button>
             </form>

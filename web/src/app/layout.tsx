@@ -24,7 +24,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de">
-      <body className="min-h-full font-sans">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

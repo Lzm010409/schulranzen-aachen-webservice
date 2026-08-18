@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermissionOrRedirect } from "@/lib/auth";
 import {
   Alert,
   Badge,
@@ -26,7 +26,7 @@ export default async function MailAccountsPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  await requireUser();
+  await requirePermissionOrRedirect("mailkonten.verwalten");
   const flags = await searchParams;
 
   const [accounts, providers] = await Promise.all([
@@ -127,7 +127,7 @@ export default async function MailAccountsPage({
                     <div className="flex justify-end gap-1">
                       <form action={verifyMailAccountAction}>
                         <input type="hidden" name="id" value={account.id} />
-                        <Button type="submit" variant="ghost">
+                        <Button type="submit" variant="tertiary">
                           Verbindung prüfen
                         </Button>
                       </form>
@@ -150,7 +150,7 @@ export default async function MailAccountsPage({
                       {account._count.campaigns === 0 ? (
                         <form action={deleteMailAccountAction}>
                           <input type="hidden" name="id" value={account.id} />
-                          <Button type="submit" variant="ghost">
+                          <Button type="submit" variant="tertiary">
                             Löschen
                           </Button>
                         </form>
@@ -210,7 +210,7 @@ export default async function MailAccountsPage({
                       {provider._count.accounts === 0 ? (
                         <form action={deleteProviderAction}>
                           <input type="hidden" name="id" value={provider.id} />
-                          <Button type="submit" variant="ghost">
+                          <Button type="submit" variant="tertiary">
                             Löschen
                           </Button>
                         </form>

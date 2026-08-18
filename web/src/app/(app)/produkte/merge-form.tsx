@@ -70,7 +70,7 @@ export function MergeForm({
         </p>
       ) : null}
 
-      <Button type="submit" variant="danger" disabled={!valid}>
+      <Button type="submit" variant="error" disabled={!valid}>
         Zusammenführen
       </Button>
     </form>

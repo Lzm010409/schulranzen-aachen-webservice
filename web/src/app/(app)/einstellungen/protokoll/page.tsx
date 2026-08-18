@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import {
   Alert,
   Card,
@@ -36,10 +37,10 @@ export default async function AuditPage({
   const user = await requireUser();
   const params = await searchParams;
 
-  if (user.role !== "ADMIN") {
+  if (!can(user, "protokoll.ansehen")) {
     return (
       <Alert variant="warning" title="Kein Zugriff">
-        Das Protokoll ist Administratoren vorbehalten.
+        Für das Protokoll fehlt Ihnen die Berechtigung.
       </Alert>
     );
   }

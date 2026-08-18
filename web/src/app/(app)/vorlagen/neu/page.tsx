@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/auth";
+import { requirePermissionOrRedirect } from "@/lib/auth";
 import { PageHeader } from "@/components/ui";
 import { TemplateEditor } from "../template-editor";
 
@@ -40,7 +40,7 @@ const STARTER = `<!doctype html>
 </html>`;
 
 export default async function NewTemplatePage() {
-  await requireUser();
+  await requirePermissionOrRedirect("vorlagen.verwalten");
 
   return (
     <div className="mx-auto max-w-6xl">

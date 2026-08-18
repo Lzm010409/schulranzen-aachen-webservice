@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermissionOrRedirect } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { campaignProgress } from "@/lib/queue";
 import {
   Alert,
@@ -43,7 +44,7 @@ export default async function CampaignDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const user = await requireUser();
+  const user = await requirePermissionOrRedirect("kampagnen.ansehen");
   const { id } = await params;
   const flags = await searchParams;
 
@@ -74,6 +75,8 @@ export default async function CampaignDetailPage({
     }),
   ]);
 
+  const mayCreate = can(user, "kampagnen.erstellen");
+  const maySend = can(user, "kampagnen.senden");
   const isDraft = campaign.status === "DRAFT";
   const isRunning = campaign.status === "SENDING";
 
@@ -84,13 +87,13 @@ export default async function CampaignDetailPage({
         description={`${STATUS_LABEL[campaign.status]} · angelegt von ${campaign.createdBy.name} am ${formatDateTime(campaign.createdAt)}`}
         actions={
           <>
-            {isRunning ? (
+            {isRunning && maySend ? (
               <form action={pauseCampaignAction}>
                 <input type="hidden" name="id" value={id} />
                 <Button type="submit">Pausieren</Button>
               </form>
             ) : null}
-            {campaign.status === "PAUSED" ? (
+            {campaign.status === "PAUSED" && maySend ? (
               <form action={resumeCampaignAction}>
                 <input type="hidden" name="id" value={id} />
                 <Button type="submit" variant="primary">
@@ -98,18 +101,18 @@ export default async function CampaignDetailPage({
                 </Button>
               </form>
             ) : null}
-            {isRunning || campaign.status === "PAUSED" ? (
+            {(isRunning || campaign.status === "PAUSED") && maySend ? (
               <form action={cancelCampaignAction}>
                 <input type="hidden" name="id" value={id} />
-                <Button type="submit" variant="danger">
+                <Button type="submit" variant="error">
                   Abbrechen
                 </Button>
               </form>
             ) : null}
-            {isDraft ? (
+            {isDraft && mayCreate ? (
               <form action={deleteCampaignAction}>
                 <input type="hidden" name="id" value={id} />
-                <Button type="submit" variant="danger">
+                <Button type="submit" variant="error">
                   Entwurf löschen
                 </Button>
               </form>
@@ -153,7 +156,7 @@ export default async function CampaignDetailPage({
             />
           </Card>
 
-          {isDraft ? (
+          {isDraft && mayCreate ? (
             <Card
               title="Vor dem Versand"
               description="Erst testen, dann freigeben. Nach der Freigabe lässt sich der Versand pausieren, aber Versendetes nicht zurückholen."
@@ -176,13 +179,21 @@ export default async function CampaignDetailPage({
               </form>
 
               <div className="mt-5 border-t border-slate-200 pt-4">
-                <form action={startCampaignAction}>
-                  <input type="hidden" name="id" value={id} />
-                  <Button type="submit" variant="primary">
-                    Versand an {progress.PENDING.toLocaleString("de-DE")}{" "}
-                    Empfänger freigeben
-                  </Button>
-                </form>
+                {maySend ? (
+                  <form action={startCampaignAction}>
+                    <input type="hidden" name="id" value={id} />
+                    <Button type="submit" variant="primary">
+                      Versand an {progress.PENDING.toLocaleString("de-DE")}{" "}
+                      Empfänger freigeben
+                    </Button>
+                  </form>
+                ) : (
+                  <Alert variant="info">
+                    Für die Freigabe des Versands fehlt Ihnen die Berechtigung.
+                    Ein Kollege mit dem Recht „Versand freigeben“ kann die
+                    Kampagne starten.
+                  </Alert>
+                )}
               </div>
             </Card>
           ) : null}
@@ -192,12 +203,14 @@ export default async function CampaignDetailPage({
               title={`Fehlgeschlagen (${progress.FAILED})`}
               description="Pro Empfänger festgehalten, warum die Zustellung nicht geklappt hat."
               footer={
+                maySend ? (
                 <form action={retryFailedAction}>
                   <input type="hidden" name="id" value={id} />
                   <Button type="submit">
                     Nur die Fehlgeschlagenen erneut senden
                   </Button>
                 </form>
+                ) : null
               }
             >
               <Table>

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { diffOf, recordAudit } from "@/lib/audit";
 import { findDuplicates, findOrCreateProduct } from "@/lib/customers";
 import { customerSchema } from "@/lib/validation";
@@ -48,7 +48,7 @@ export async function saveCustomerAction(
   _prev: CustomerFormState,
   formData: FormData,
 ): Promise<CustomerFormState> {
-  const user = await requireUser();
+  const user = await requirePermission("kunden.bearbeiten");
   const id = String(formData.get("id") ?? "");
   const parsed = readCustomer(formData);
 
@@ -139,7 +139,7 @@ export async function saveCustomerAction(
 }
 
 export async function deleteCustomerAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requirePermission("kunden.loeschen");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
@@ -160,7 +160,7 @@ export async function deleteCustomerAction(formData: FormData): Promise<void> {
 }
 
 export async function restoreCustomerAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requirePermission("kunden.loeschen");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
@@ -177,7 +177,7 @@ export async function restoreCustomerAction(formData: FormData): Promise<void> {
 }
 
 export async function setUnsubscribedAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requirePermission("kunden.bearbeiten");
   const id = String(formData.get("id") ?? "");
   const value = formData.get("value") === "1";
   if (!id) return;
@@ -202,7 +202,7 @@ export async function setUnsubscribedAction(formData: FormData): Promise<void> {
 
 /** Speichert den aktuellen Filterstand als wiederverwendbares Segment. */
 export async function saveSegmentAction(formData: FormData): Promise<void> {
-  await requireUser();
+  await requirePermission("kunden.ansehen");
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
 
@@ -224,7 +224,7 @@ export async function saveSegmentAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteSegmentAction(formData: FormData): Promise<void> {
-  await requireUser();
+  await requirePermission("kunden.ansehen");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.segment.delete({ where: { id } }).catch(() => undefined);

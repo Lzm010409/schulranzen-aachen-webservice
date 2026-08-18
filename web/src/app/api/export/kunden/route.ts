@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { recordAudit } from "@/lib/audit";
 import { buildWhere, parseFilter } from "@/lib/customer-filter";
 import { customerPages, type CustomerListRow } from "@/lib/customers";
@@ -53,6 +54,9 @@ export async function GET(request: NextRequest) {
   const user = await getSession();
   if (!user) {
     return new Response("Nicht angemeldet", { status: 401 });
+  }
+  if (!can(user, "kunden.exportieren")) {
+    return new Response("Keine Berechtigung zum Exportieren", { status: 403 });
   }
 
   const params = Object.fromEntries(request.nextUrl.searchParams.entries());

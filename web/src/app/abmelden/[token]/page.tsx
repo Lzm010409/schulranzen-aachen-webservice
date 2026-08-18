@@ -35,26 +35,26 @@ export default async function UnsubscribePage({
     : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="card p-6 text-center">
-          <h1 className="text-lg font-semibold text-slate-900">
+    <main className="centered-page">
+      <div style={{ width: "100%", maxWidth: "28rem" }}>
+        <div className="card" style={{ padding: "var(--lumo-space-l)", textAlign: "center" }}>
+          <h1 style={{ fontSize: "var(--lumo-font-size-xl)" }}>
             Newsletter von Schulranzen-Aachen
           </h1>
 
           {!customer ? (
-            <p className="mt-4 text-sm text-slate-600">
+            <p className="view-description">
               Dieser Abmeldelink ist ungültig oder nicht mehr gültig. Bitte
               antworten Sie auf die E-Mail, dann tragen wir Sie manuell aus.
             </p>
           ) : ok === "1" || customer.unsubscribedAt ? (
             <>
-              <p className="mt-4 text-sm text-slate-700">
+              <p style={{ marginTop: "1rem" }}>
                 Sie wurden abgemeldet. Von uns kommen keine weiteren
                 Werbe-E-Mails an{" "}
                 <strong>{customer.email ?? "diese Adresse"}</strong>.
               </p>
-              <p className="mt-3 text-xs text-slate-500">
+              <p className="subtle" style={{ marginTop: "0.75rem" }}>
                 Ihre Kundendaten bleiben für die Abwicklung bereits getätigter
                 Käufe gespeichert. Eine vollständige Löschung können Sie
                 jederzeit per E-Mail verlangen.
@@ -62,11 +62,11 @@ export default async function UnsubscribePage({
             </>
           ) : (
             <>
-              <p className="mt-4 text-sm text-slate-700">
+              <p style={{ marginTop: "1rem" }}>
                 Hallo {customer.firstName} {customer.lastName}, möchten Sie sich
                 von unseren E-Mails abmelden?
               </p>
-              <div className="mt-5">
+              <div style={{ marginTop: "1.25rem" }}>
                 <UnsubscribeButton
                   token={token}
                   action={unsubscribeAction}
@@ -76,7 +76,7 @@ export default async function UnsubscribePage({
           )}
         </div>
 
-        <p className="mt-6 text-center text-xs text-slate-500">
+        <p className="subtle" style={{ marginTop: "1.5rem", textAlign: "center" }}>
           Schulranzen-Aachen
         </p>
       </div>

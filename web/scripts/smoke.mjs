@@ -185,11 +185,13 @@ try {
     (await page.textContent("body")).includes("Ergobag Cubo"),
   );
 
-  // 11. Vorlage vorhanden
+  // 11. Vorlagenliste. Bewusst nicht an einen bestimmten Namen gebunden —
+  // der Bestand haengt davon ab, was geseedet oder importiert wurde.
   await page.goto(`${BASE}/vorlagen`);
+  const templateBody = await page.textContent("body");
   check(
-    "Standardvorlage vorhanden",
-    (await page.textContent("body")).includes("Standard-Layout"),
+    "Vorlagenseite zeigt Bestand oder Leerzustand",
+    templateBody.includes("Betreff") || templateBody.includes("Noch keine Vorlage"),
   );
 
   // 12. Kampagne ohne Absenderkonto wird sauber abgefangen

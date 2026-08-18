@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import { fieldErrors, templateSchema } from "@/lib/validation";
 import { unknownPlaceholders } from "@/lib/template";
@@ -17,7 +17,7 @@ export async function saveTemplateAction(
   _prev: TemplateFormState,
   formData: FormData,
 ): Promise<TemplateFormState> {
-  const user = await requireUser();
+  const user = await requirePermission("vorlagen.verwalten");
   const id = String(formData.get("id") ?? "");
 
   const parsed = templateSchema.safeParse({
@@ -89,7 +89,7 @@ export async function saveTemplateAction(
 }
 
 export async function deleteTemplateAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requirePermission("vorlagen.verwalten");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
@@ -111,7 +111,7 @@ export async function deleteTemplateAction(formData: FormData): Promise<void> {
 export async function duplicateTemplateAction(
   formData: FormData,
 ): Promise<void> {
-  const user = await requireUser();
+  const user = await requirePermission("vorlagen.verwalten");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
@@ -141,7 +141,7 @@ export async function duplicateTemplateAction(
 
 /** Stellt eine frühere Fassung wieder her. */
 export async function restoreVersionAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requirePermission("vorlagen.verwalten");
   const versionId = String(formData.get("versionId") ?? "");
   if (!versionId) return;
 
@@ -193,7 +193,7 @@ export async function restoreVersionAction(formData: FormData): Promise<void> {
 export async function checkPlaceholdersAction(
   body: string,
 ): Promise<{ unknown: string[]; hasContent: boolean }> {
-  await requireUser();
+  await requirePermission("vorlagen.ansehen");
   return {
     unknown: unknownPlaceholders(body),
     hasContent: /\{\{\s*content\s*\}\}/i.test(body),

@@ -5,6 +5,7 @@ import { cache } from "react";
 import { db } from "./db";
 import { verifyPassword } from "./crypto";
 import { SESSION_COOKIE } from "./auth.shared";
+import { can, type Permission } from "./permissions";
 import type { Role, User } from "@/generated/prisma/client";
 
 export { SESSION_COOKIE };
@@ -17,7 +18,10 @@ const RATE_WINDOW_MS = 1000 * 60 * 15;
 const RATE_MAX_PER_EMAIL = 5;
 const RATE_MAX_PER_IP = 20;
 
-export type SessionUser = Pick<User, "id" | "email" | "name" | "role">;
+export type SessionUser = Pick<
+  User,
+  "id" | "email" | "name" | "role" | "permissions"
+>;
 
 async function clientIp(): Promise<string> {
   const h = await headers();
@@ -52,8 +56,8 @@ export const getSession = cache(async (): Promise<SessionUser | null> => {
       .catch(() => undefined);
   }
 
-  const { id, email, name, role } = session.user;
-  return { id, email, name, role };
+  const { id, email, name, role, permissions } = session.user;
+  return { id, email, name, role, permissions };
 });
 
 export async function requireUser(): Promise<SessionUser> {
@@ -73,6 +77,32 @@ export async function requireAdmin(): Promise<SessionUser> {
 export function hasRole(user: SessionUser | null, role: Role): boolean {
   if (!user) return false;
   return user.role === "ADMIN" || user.role === role;
+}
+
+/**
+ * Verbindliche Rechtepruefung. Fehlt das Recht, bricht die Aktion ab —
+ * die Oberflaeche blendet solche Bedienelemente zwar aus, aber darauf
+ * verlaesst sich der Server nicht.
+ */
+export async function requirePermission(
+  permission: Permission,
+): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!can(user, permission)) {
+    throw new Error(
+      "Für diese Aktion fehlt Ihnen die Berechtigung. Bitte wenden Sie sich an einen Administrator.",
+    );
+  }
+  return user;
+}
+
+/** Wie requirePermission, aber fuer Seiten: leitet auf die Startseite um. */
+export async function requirePermissionOrRedirect(
+  permission: Permission,
+): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!can(user, permission)) redirect("/?kein-zugriff=1");
+  return user;
 }
 
 type LoginResult =
@@ -173,6 +203,7 @@ export async function login(
       email: user.email,
       name: user.name,
       role: user.role,
+      permissions: user.permissions,
     },
   };
 }

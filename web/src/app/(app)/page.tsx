@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import {
+  Alert,
   Badge,
   Card,
   LinkButton,
@@ -14,8 +16,13 @@ import {
 export const metadata = { title: "Übersicht" };
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const user = await requireUser();
+  const flags = await searchParams;
 
   const [customers, unsubscribed, withoutEmail, products, campaigns, recent] =
     await Promise.all([
@@ -54,22 +61,33 @@ export default async function DashboardPage() {
         description="Kundenverwaltung und Mailversand für Schulranzen-Aachen."
         actions={
           <>
-            <LinkButton href="/kunden/neu">Kunde anlegen</LinkButton>
-            <LinkButton href="/kampagnen/neu" variant="primary">
-              Neue Mailkampagne
-            </LinkButton>
+            {can(user, "kunden.bearbeiten") ? (
+              <LinkButton href="/kunden/neu">Kunde anlegen</LinkButton>
+            ) : null}
+            {can(user, "kampagnen.erstellen") ? (
+              <LinkButton href="/kunden" variant="primary">
+                Neue Mailkampagne
+              </LinkButton>
+            ) : null}
           </>
         }
       />
 
+      {flags["kein-zugriff"] ? (
+        <div className="mb-6">
+          <Alert variant="warning" title="Kein Zugriff">
+            Für die aufgerufene Seite fehlt Ihnen die Berechtigung. Ein
+            Administrator kann sie unter Einstellungen → Benutzer freischalten.
+          </Alert>
+        </div>
+      ) : null}
+
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <div key={stat.label} className="card p-5">
-            <p className="text-sm text-slate-600">{stat.label}</p>
-            <p className="mt-1 text-3xl font-semibold tabular-nums text-slate-900">
-              {stat.value.toLocaleString("de-DE")}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">{stat.hint}</p>
+          <div key={stat.label} className="stat-card">
+            <p className="stat-label">{stat.label}</p>
+            <p className="stat-value">{stat.value.toLocaleString("de-DE")}</p>
+            <p className="stat-hint">{stat.hint}</p>
           </div>
         ))}
       </div>

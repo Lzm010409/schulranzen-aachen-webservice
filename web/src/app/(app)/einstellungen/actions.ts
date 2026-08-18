@@ -3,10 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireAdmin, requireUser } from "@/lib/auth";
+import { requireAdmin, requirePermission, requireUser } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import { encryptSecret, hashPassword, verifyPassword } from "@/lib/crypto";
 import { loadAccount, verifyAccount } from "@/lib/mailer";
+import {
+  DEFAULT_PERMISSIONS,
+  sanitizePermissions,
+  withImplied,
+} from "@/lib/permissions";
 import {
   fieldErrors,
   mailAccountSchema,
@@ -35,10 +40,16 @@ export async function saveUserAction(
     role: formData.get("role") ?? "MITARBEITER",
     password: formData.get("password") ?? "",
     active: formData.get("active") === "on",
+    permissions: formData.getAll("permissions").map(String),
   });
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
 
-  const { password, ...data } = parsed.data;
+  const { password, permissions: rawPermissions, ...data } = parsed.data;
+
+  // Unbekannte Werte aus manipulierten Formularen fallen hier weg; abhaengige
+  // Rechte werden ergaenzt, damit kein Konto entsteht, das bearbeiten darf,
+  // aber nichts sehen kann.
+  const permissions = withImplied(sanitizePermissions(rawPermissions));
 
   // Beim Anlegen ist ein Passwort Pflicht, beim Bearbeiten optional.
   if (!id || password) {
@@ -75,11 +86,17 @@ export async function saveUserAction(
         where: { id },
         data: {
           ...data,
+          permissions,
           ...(password ? { passwordHash: await hashPassword(password) } : {}),
         },
       })
     : await db.user.create({
-        data: { ...data, passwordHash: await hashPassword(password) },
+        data: {
+          ...data,
+          permissions:
+            permissions.length > 0 ? permissions : DEFAULT_PERMISSIONS,
+          passwordHash: await hashPassword(password),
+        },
       });
 
   // Passwortwechsel beendet alle offenen Sitzungen dieses Kontos.
@@ -92,7 +109,13 @@ export async function saveUserAction(
     entity: "User",
     entityId: user.id,
     action: id ? "UPDATE" : "CREATE",
-    diff: { name: data.name, email: data.email, role: data.role, active: data.active },
+    diff: {
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      active: data.active,
+      rechte: permissions.join(", ") || "(keine)",
+    },
   });
 
   revalidatePath("/einstellungen/benutzer");
@@ -167,7 +190,7 @@ export async function saveProviderAction(
   _prev: SettingsFormState,
   formData: FormData,
 ): Promise<SettingsFormState> {
-  const user = await requireUser();
+  const user = await requirePermission("mailkonten.verwalten");
   const id = String(formData.get("id") ?? "");
 
   const parsed = providerSchema.safeParse({
@@ -211,7 +234,7 @@ export async function saveProviderAction(
 }
 
 export async function deleteProviderAction(formData: FormData): Promise<void> {
-  await requireUser();
+  await requirePermission("mailkonten.verwalten");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const inUse = await db.mailAccount.count({ where: { providerId: id } });
@@ -226,7 +249,7 @@ export async function saveMailAccountAction(
   _prev: SettingsFormState,
   formData: FormData,
 ): Promise<SettingsFormState> {
-  const user = await requireUser();
+  const user = await requirePermission("mailkonten.verwalten");
   const id = String(formData.get("id") ?? "");
 
   const parsed = mailAccountSchema.safeParse({
@@ -289,7 +312,7 @@ export async function saveMailAccountAction(
 export async function verifyMailAccountAction(
   formData: FormData,
 ): Promise<void> {
-  await requireUser();
+  await requirePermission("mailkonten.verwalten");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
@@ -310,7 +333,7 @@ export async function verifyMailAccountAction(
 export async function deleteMailAccountAction(
   formData: FormData,
 ): Promise<void> {
-  await requireUser();
+  await requirePermission("mailkonten.verwalten");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const inUse = await db.campaign.count({ where: { accountId: id } });

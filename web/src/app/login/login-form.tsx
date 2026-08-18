@@ -16,7 +16,7 @@ export function LoginForm({ next }: { next?: string }) {
   const [email, setEmail] = useState("");
 
   return (
-    <ActionForm action={formAction} className="space-y-4">
+    <ActionForm action={formAction} className="dialog-body" style={{ padding: 0 }}>
       <input type="hidden" name="next" value={next ?? "/"} />
 
       {state.error ? <Alert variant="error">{state.error}</Alert> : null}

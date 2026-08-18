@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermissionOrRedirect } from "@/lib/auth";
 import { PageHeader } from "@/components/ui";
 import { CustomerForm } from "../customer-form";
 
@@ -7,7 +7,7 @@ export const metadata = { title: "Kunde anlegen" };
 export const dynamic = "force-dynamic";
 
 export default async function NewCustomerPage() {
-  await requireUser();
+  await requirePermissionOrRedirect("kunden.bearbeiten");
   const products = await db.product.findMany({
     where: { active: true },
     orderBy: { name: "asc" },

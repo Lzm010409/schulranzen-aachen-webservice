@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermissionOrRedirect } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import {
   buildWhere,
   describeFilter,
@@ -35,7 +36,7 @@ export default async function CustomersPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireUser();
+  const user = await requirePermissionOrRedirect("kunden.ansehen");
   const params = await searchParams;
 
   const filter = parseFilter(params);
@@ -73,19 +74,28 @@ export default async function CustomersPage({
   return (
     <>
       <PageHeader
-        title="Kunden"
         description={`${total.toLocaleString("de-DE")} Datensätze · ${describeFilter(filter, productName)}`}
         actions={
           <>
-            <LinkButton href={`/api/export/kunden?${exportParams}&format=csv`}>
-              CSV exportieren
-            </LinkButton>
-            <LinkButton href={`/api/export/kunden?${exportParams}&format=xlsx`}>
-              Excel exportieren
-            </LinkButton>
-            <LinkButton href="/kunden/neu" variant="primary">
-              Kunde anlegen
-            </LinkButton>
+            {can(user, "kunden.exportieren") ? (
+              <>
+                <LinkButton
+                  href={`/api/export/kunden?${exportParams}&format=csv`}
+                >
+                  CSV exportieren
+                </LinkButton>
+                <LinkButton
+                  href={`/api/export/kunden?${exportParams}&format=xlsx`}
+                >
+                  Excel exportieren
+                </LinkButton>
+              </>
+            ) : null}
+            {can(user, "kunden.bearbeiten") ? (
+              <LinkButton href="/kunden/neu" variant="primary">
+                Kunde anlegen
+              </LinkButton>
+            ) : null}
           </>
         }
       />
@@ -123,6 +133,7 @@ export default async function CustomersPage({
             total={total}
             filterQuery={exportParams.toString()}
             ids={customers.map((c) => c.id)}
+            canCreateCampaign={can(user, "kampagnen.erstellen")}
           >
             <Table>
               <thead>

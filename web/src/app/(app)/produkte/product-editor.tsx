@@ -16,11 +16,11 @@ type ProductValues = {
 export function ProductEditor({
   product,
   trigger,
-  variant = "ghost",
+  variant = "tertiary",
 }: {
   product: ProductValues | null;
   trigger: string;
-  variant?: "ghost" | "primary";
+  variant?: "tertiary" | "primary";
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ProductFormState, FormData>(

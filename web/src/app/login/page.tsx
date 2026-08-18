@@ -15,20 +15,23 @@ export default async function LoginPage({
   const { next } = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-xl font-semibold text-slate-900">
-            Schulranzen-Aachen
+    <main className="centered-page">
+      <div style={{ width: "100%", maxWidth: "22rem" }}>
+        <div style={{ marginBottom: "1.5rem", textAlign: "center" }}>
+          <h1 style={{ fontSize: "var(--lumo-font-size-xl)" }}>
+            Schulranzen-Aachen-Webservice
           </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Kundenverwaltung und Mailversand
-          </p>
+          <p className="view-description">Kundenverwaltung und Mailversand</p>
         </div>
-        <div className="card p-6">
-          <LoginForm next={next} />
+        <div className="card">
+          <div className="card-body">
+            <LoginForm next={next} />
+          </div>
         </div>
-        <p className="mt-6 text-center text-xs text-slate-500">
+        <p
+          className="subtle"
+          style={{ marginTop: "1.5rem", textAlign: "center" }}
+        >
           Interner Zugang. Alle Anmeldungen werden protokolliert.
         </p>
       </div>

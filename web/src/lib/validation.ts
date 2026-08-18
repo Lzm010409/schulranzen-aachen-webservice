@@ -113,6 +113,8 @@ export const userSchema = z.object({
   role: z.enum(["ADMIN", "MITARBEITER"]),
   password: z.string().default(""),
   active: z.coerce.boolean().default(true),
+  // Einzelrechte; werden in der Action gegen den Katalog geprueft.
+  permissions: z.array(z.string()).default([]),
 });
 
 export const passwordSchema = z

@@ -202,7 +202,7 @@ export function CustomerForm({
               </Field>
               <Button
                 type="button"
-                variant="ghost"
+                variant="tertiary"
                 onClick={() =>
                   setPurchases((rows) =>
                     rows.length === 1

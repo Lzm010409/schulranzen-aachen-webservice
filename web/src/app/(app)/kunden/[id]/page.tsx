@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermissionOrRedirect } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import {
   Alert,
   Badge,
@@ -29,7 +30,7 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  await requireUser();
+  const user = await requirePermissionOrRedirect("kunden.ansehen");
   const { id } = await params;
   const flags = await searchParams;
 
@@ -67,9 +68,11 @@ export default async function CustomerDetailPage({
         actions={
           <>
             <LinkButton href="/kunden">Zur Liste</LinkButton>
-            <LinkButton href={`/kunden/${id}/bearbeiten`} variant="primary">
-              Bearbeiten
-            </LinkButton>
+            {can(user, "kunden.bearbeiten") ? (
+              <LinkButton href={`/kunden/${id}/bearbeiten`} variant="primary">
+                Bearbeiten
+              </LinkButton>
+            ) : null}
           </>
         }
       />
@@ -231,14 +234,14 @@ export default async function CustomerDetailPage({
             </form>
           </Card>
 
-          {!customer.deletedAt ? (
+          {!customer.deletedAt && can(user, "kunden.loeschen") ? (
             <Card title="Löschen">
               <p className="mb-3 text-sm text-slate-600">
                 Der Datensatz wird ausgeblendet, bleibt aber wiederherstellbar.
               </p>
               <form action={deleteCustomerAction}>
                 <input type="hidden" name="id" value={customer.id} />
-                <Button type="submit" variant="danger">
+                <Button type="submit" variant="error">
                   Kunde löschen
                 </Button>
               </form>

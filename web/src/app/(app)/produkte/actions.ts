@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import { mergeProducts } from "@/lib/customers";
 import { productSlug } from "@/lib/normalize";
@@ -14,7 +14,7 @@ export async function saveProductAction(
   _prev: ProductFormState,
   formData: FormData,
 ): Promise<ProductFormState> {
-  const user = await requireUser();
+  const user = await requirePermission("produkte.verwalten");
   const id = String(formData.get("id") ?? "");
 
   const parsed = productSchema.safeParse({
@@ -53,7 +53,7 @@ export async function saveProductAction(
 }
 
 export async function deleteProductAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requirePermission("produkte.verwalten");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
@@ -83,7 +83,7 @@ export async function deleteProductAction(formData: FormData): Promise<void> {
 
 /** Fuehrt Duplikate zusammen — das Aufraeumwerkzeug fuer den Altbestand. */
 export async function mergeProductsAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requirePermission("produkte.verwalten");
   const sourceId = String(formData.get("sourceId") ?? "");
   const targetId = String(formData.get("targetId") ?? "");
   if (!sourceId || !targetId || sourceId === targetId) return;

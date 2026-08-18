@@ -26,6 +26,9 @@ model User {
   name         String
   passwordHash String
   role         Role      @default(MITARBEITER)
+  /// Einzelrechte, siehe src/lib/permissions.ts. Administratoren haben
+  /// unabhaengig davon immer alle Rechte.
+  permissions  String[]  @default([])
   active       Boolean   @default(true)
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())

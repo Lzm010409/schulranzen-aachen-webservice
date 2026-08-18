@@ -19,12 +19,12 @@ export function AccountEditor({
   account,
   providers,
   trigger,
-  variant = "ghost",
+  variant = "tertiary",
 }: {
   account: AccountValues | null;
   providers: { id: string; name: string }[];
   trigger: string;
-  variant?: "ghost" | "primary";
+  variant?: "tertiary" | "primary";
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<SettingsFormState, FormData>(

@@ -13,11 +13,13 @@ export function SelectionToolbar({
   total,
   filterQuery,
   ids,
+  canCreateCampaign,
   children,
 }: {
   total: number;
   filterQuery: string;
   ids: string[];
+  canCreateCampaign: boolean;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -99,16 +101,18 @@ export function SelectionToolbar({
             : "nichts ausgewählt"}
         </span>
 
-        <div className="ml-auto flex gap-2">
-          <Button
-            type="button"
-            variant="primary"
-            disabled={count === 0}
-            onClick={startCampaign}
-          >
-            Mail an Auswahl
-          </Button>
-        </div>
+        {canCreateCampaign ? (
+          <div className="ml-auto flex gap-2">
+            <Button
+              type="button"
+              variant="primary"
+              disabled={count === 0}
+              onClick={startCampaign}
+            >
+              Mail an Auswahl
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {children}

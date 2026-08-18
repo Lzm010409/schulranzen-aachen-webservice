@@ -7,26 +7,28 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
 
 // ------------------------------------------------------------------ Layout
 
+/**
+ * Kopfzeile einer Ansicht. Der Titel ist optional: auf den Hauptseiten steht
+ * er bereits in der Navigationsleiste — im Altsystem kam er dort aus
+ * @PageTitle. Unterseiten (ein Kunde, eine Kampagne) setzen ihn, weil die
+ * Leiste nur den Bereich nennt.
+ */
 export function PageHeader({
   title,
   description,
   actions,
 }: {
-  title: string;
+  title?: string;
   description?: string;
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div className="view-header">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-          {title}
-        </h1>
-        {description ? (
-          <p className="mt-1 text-sm text-slate-600">{description}</p>
-        ) : null}
+        {title ? <h1 className="view-title">{title}</h1> : null}
+        {description ? <p className="view-description">{description}</p> : null}
       </div>
-      {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
+      {actions ? <div className="toolbar">{actions}</div> : null}
     </div>
   );
 }
@@ -47,19 +49,13 @@ export function Card({
   return (
     <section className={cx("card", className)}>
       {title ? (
-        <header className="border-b border-slate-200 px-5 py-4">
-          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-          {description ? (
-            <p className="mt-0.5 text-sm text-slate-600">{description}</p>
-          ) : null}
+        <header className="card-header">
+          <h2 className="card-title">{title}</h2>
+          {description ? <p className="card-description">{description}</p> : null}
         </header>
       ) : null}
-      <div className="p-5">{children}</div>
-      {footer ? (
-        <footer className="border-t border-slate-200 bg-slate-50 px-5 py-3">
-          {footer}
-        </footer>
-      ) : null}
+      <div className="card-body">{children}</div>
+      {footer ? <footer className="card-footer">{footer}</footer> : null}
     </section>
   );
 }
@@ -74,17 +70,21 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 px-6 py-14 text-center">
-      <p className="text-sm font-medium text-slate-900">{title}</p>
+    <div className="empty-state">
+      <p style={{ fontWeight: 500, color: "var(--lumo-body-text-color)" }}>
+        {title}
+      </p>
       {description ? (
-        <p className="max-w-md text-sm text-slate-600">{description}</p>
+        <p style={{ margin: "0.5rem auto 0", maxWidth: "34rem" }}>
+          {description}
+        </p>
       ) : null}
-      {action ? <div className="mt-3">{action}</div> : null}
+      {action ? <div style={{ marginTop: "1rem" }}>{action}</div> : null}
     </div>
   );
 }
 
-// ------------------------------------------------------------------ Meldungen
+// ---------------------------------------------------------------- Meldungen
 
 export function Alert({
   variant = "info",
@@ -95,17 +95,10 @@ export function Alert({
   title?: string;
   children?: ReactNode;
 }) {
-  const styles = {
-    info: "border-blue-200 bg-blue-50 text-blue-900",
-    success: "border-emerald-200 bg-emerald-50 text-emerald-900",
-    warning: "border-amber-200 bg-amber-50 text-amber-900",
-    error: "border-red-200 bg-red-50 text-red-900",
-  }[variant];
-
   return (
-    <div className={cx("rounded-md border px-4 py-3 text-sm", styles)}>
-      {title ? <p className="font-medium">{title}</p> : null}
-      {children ? <div className={title ? "mt-1" : ""}>{children}</div> : null}
+    <div className={cx("alert", `alert-${variant}`)}>
+      {title ? <p className="alert-title">{title}</p> : null}
+      {children ? <div>{children}</div> : null}
     </div>
   );
 }
@@ -117,17 +110,17 @@ export function Badge({
   children: ReactNode;
   tone?: "slate" | "green" | "amber" | "red" | "blue";
 }) {
-  const styles = {
-    slate: "bg-slate-100 text-slate-700",
-    green: "bg-emerald-100 text-emerald-800",
-    amber: "bg-amber-100 text-amber-800",
-    red: "bg-red-100 text-red-800",
-    blue: "bg-blue-100 text-blue-800",
+  const cls = {
+    slate: "",
+    green: "badge-success",
+    amber: "badge-warning",
+    red: "badge-error",
+    blue: "badge-primary",
   }[tone];
-  return <span className={cx("badge", styles)}>{children}</span>;
+  return <span className={cx("badge", cls)}>{children}</span>;
 }
 
-// ------------------------------------------------------------------ Formulare
+// ---------------------------------------------------------------- Formulare
 
 export function Field({
   label,
@@ -146,39 +139,39 @@ export function Field({
 }) {
   return (
     <div className={className}>
-      <label className="label-text" htmlFor={htmlFor}>
+      <label className="field-label" htmlFor={htmlFor}>
         {label}
       </label>
       {children}
-      {hint && !error ? (
-        <p className="mt-1 text-xs text-slate-500">{hint}</p>
-      ) : null}
-      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+      {hint && !error ? <p className="field-hint">{hint}</p> : null}
+      {error ? <p className="field-error">{error}</p> : null}
     </div>
   );
 }
 
 export function Input(props: ComponentProps<"input">) {
-  return <input {...props} className={cx("field", props.className)} />;
+  return <input {...props} className={cx("field-control", props.className)} />;
 }
 
 export function Textarea(props: ComponentProps<"textarea">) {
-  return <textarea {...props} className={cx("field", props.className)} />;
+  return (
+    <textarea {...props} className={cx("field-control", props.className)} />
+  );
 }
 
 export function Select(props: ComponentProps<"select">) {
-  return <select {...props} className={cx("field", props.className)} />;
+  return <select {...props} className={cx("field-control", props.className)} />;
 }
 
-// ------------------------------------------------------------------ Aktionen
+// ----------------------------------------------------------------- Aktionen
 
-type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "error" | "tertiary";
 
 const variantClass: Record<ButtonVariant, string> = {
   primary: "btn-primary",
-  secondary: "btn-secondary",
-  danger: "btn-danger",
-  ghost: "btn-ghost",
+  secondary: "",
+  error: "btn-error",
+  tertiary: "btn-tertiary",
 };
 
 export function Button({
@@ -187,10 +180,7 @@ export function Button({
   ...props
 }: ComponentProps<"button"> & { variant?: ButtonVariant }) {
   return (
-    <button
-      {...props}
-      className={cx("btn", variantClass[variant], className)}
-    />
+    <button {...props} className={cx("btn", variantClass[variant], className)} />
   );
 }
 
@@ -204,12 +194,12 @@ export function LinkButton({
   );
 }
 
-// ------------------------------------------------------------------ Tabellen
+// ----------------------------------------------------------------- Tabellen
 
 export function Table({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-left">{children}</table>
+    <div className="grid-wrapper">
+      <table className="grid">{children}</table>
     </div>
   );
 }
@@ -221,16 +211,7 @@ export function Th({
   children?: ReactNode;
   className?: string;
 }) {
-  return (
-    <th
-      className={cx(
-        "border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600",
-        className,
-      )}
-    >
-      {children}
-    </th>
-  );
+  return <th className={className}>{children}</th>;
 }
 
 export function Td({
@@ -240,11 +221,7 @@ export function Td({
   children?: ReactNode;
   className?: string;
 }) {
-  return (
-    <td className={cx("border-b border-slate-100 table-cell-compact", className)}>
-      {children}
-    </td>
-  );
+  return <td className={className}>{children}</td>;
 }
 
 // ------------------------------------------------------------------ Formate

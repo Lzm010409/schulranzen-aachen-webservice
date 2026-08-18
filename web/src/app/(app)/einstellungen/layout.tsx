@@ -1,4 +1,3 @@
-import { PageHeader } from "@/components/ui";
 import { SettingsNav } from "./settings-nav";
 
 export default function SettingsLayout({
@@ -8,7 +7,6 @@ export default function SettingsLayout({
 }) {
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader title="Einstellungen" />
       <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
         <SettingsNav />
         <div>{children}</div>
