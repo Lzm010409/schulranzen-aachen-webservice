@@ -8,6 +8,7 @@ import {
   PageHeader,
   formatDateTime,
 } from "@/components/ui";
+import { Pagination } from "@/components/pagination";
 import { TemplateEditor } from "../template-editor";
 import {
   deleteTemplateAction,
@@ -16,6 +17,8 @@ import {
 } from "../actions";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 10;
 
 export default async function TemplateDetailPage({
   params,
@@ -28,14 +31,20 @@ export default async function TemplateDetailPage({
   const { id } = await params;
   const flags = await searchParams;
 
-  const template = await db.mailTemplate.findUnique({
-    where: { id },
-    include: {
-      versions: { orderBy: { version: "desc" }, take: 10 },
-    },
-  });
+  const versionPage = Math.max(1, Number(flags.fassung ?? 1) || 1);
 
+  const template = await db.mailTemplate.findUnique({ where: { id } });
   if (!template || template.deletedAt) notFound();
+
+  const [versionTotal, versions] = await Promise.all([
+    db.mailTemplateVersion.count({ where: { templateId: id } }),
+    db.mailTemplateVersion.findMany({
+      where: { templateId: id },
+      orderBy: { version: "desc" },
+      skip: (versionPage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -76,14 +85,14 @@ export default async function TemplateDetailPage({
         }}
       />
 
-      {template.versions.length > 1 ? (
+      {versionTotal > 1 ? (
         <div className="mt-6">
           <Card
-            title="Frühere Fassungen"
+            title={`Frühere Fassungen (${versionTotal})`}
             description="Wiederherstellen legt eine neue Version an; nichts geht verloren."
           >
             <ul className="divide-y divide-slate-100">
-              {template.versions.map((version) => (
+              {versions.map((version) => (
                 <li
                   key={version.id}
                   className="flex flex-wrap items-center justify-between gap-2 py-2"
@@ -111,6 +120,14 @@ export default async function TemplateDetailPage({
                 </li>
               ))}
             </ul>
+
+            <Pagination
+              page={versionPage}
+              pageSize={PAGE_SIZE}
+              total={versionTotal}
+              params={flags}
+              paramName="fassung"
+            />
           </Card>
         </div>
       ) : null}

@@ -11,23 +11,38 @@ import {
   Th,
   formatDateTime,
 } from "@/components/ui";
+import { Pagination } from "@/components/pagination";
 
 export const metadata = { title: "Vorlagen" };
 export const dynamic = "force-dynamic";
 
-export default async function TemplatesPage() {
-  await requirePermissionOrRedirect("vorlagen.ansehen");
+const PAGE_SIZE = 25;
 
-  const templates = await db.mailTemplate.findMany({
-    where: { deletedAt: null },
-    orderBy: [{ category: "asc" }, { name: "asc" }],
-    include: { _count: { select: { campaigns: true } } },
-  });
+export default async function TemplatesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  await requirePermissionOrRedirect("vorlagen.ansehen");
+  const params = await searchParams;
+  const page = Math.max(1, Number(params.seite ?? 1) || 1);
+
+  const where = { deletedAt: null };
+  const [total, templates] = await Promise.all([
+    db.mailTemplate.count({ where }),
+    db.mailTemplate.findMany({
+      where,
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+      include: { _count: { select: { campaigns: true } } },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+  ]);
 
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        description="Wiederverwendbare Layouts. Der Kampagnentext wird an der Stelle {{content}} eingesetzt."
+        description={`${total.toLocaleString("de-DE")} Vorlagen · Wiederverwendbare Layouts. Der Kampagnentext wird an der Stelle {{content}} eingesetzt.`}
         actions={
           <LinkButton href="/vorlagen/neu" variant="primary">
             Vorlage anlegen
@@ -94,6 +109,13 @@ export default async function TemplatesPage() {
           </Table>
         )}
       </Card>
+
+      <Pagination
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        params={params}
+      />
     </div>
   );
 }

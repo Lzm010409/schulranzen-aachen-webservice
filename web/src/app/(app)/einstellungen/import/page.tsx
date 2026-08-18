@@ -1,28 +1,41 @@
 import { db } from "@/lib/db";
 import { requirePermissionOrRedirect } from "@/lib/auth";
 import { Card, Table, Td, Th, formatDateTime } from "@/components/ui";
+import { Pagination } from "@/components/pagination";
 import { LegacyImportForm } from "./legacy-form";
 import { TableImportForm } from "./table-form";
 
 export const metadata = { title: "Import" };
 export const dynamic = "force-dynamic";
 
-export default async function ImportPage() {
-  await requirePermissionOrRedirect("daten.importieren");
+const PAGE_SIZE = 10;
 
-  const runs = await db.migrationRun.findMany({
-    orderBy: { startedAt: "desc" },
-    take: 10,
-  });
+export default async function ImportPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  await requirePermissionOrRedirect("daten.importieren");
+  const params = await searchParams;
+  const page = Math.max(1, Number(params.seite ?? 1) || 1);
+
+  const [runTotal, runs] = await Promise.all([
+    db.migrationRun.count(),
+    db.migrationRun.findMany({
+      orderBy: { startedAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
       <LegacyImportForm />
       <TableImportForm />
 
-      {runs.length > 0 ? (
+      {runTotal > 0 ? (
         <Card
-          title="Bisherige Übernahmen"
+          title={`Bisherige Übernahmen (${runTotal})`}
           description="Jeder Lauf wird protokolliert, auch die Trockenläufe."
         >
           <Table>
@@ -58,6 +71,13 @@ export default async function ImportPage() {
               })}
             </tbody>
           </Table>
+
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={runTotal}
+            params={params}
+          />
         </Card>
       ) : null}
     </div>

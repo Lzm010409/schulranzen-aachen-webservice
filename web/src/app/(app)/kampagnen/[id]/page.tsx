@@ -16,6 +16,7 @@ import {
   Th,
   formatDateTime,
 } from "@/components/ui";
+import { Pagination } from "@/components/pagination";
 import { LiveProgress } from "../live-progress";
 import {
   cancelCampaignAction,
@@ -29,12 +30,30 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 25;
+
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "Entwurf",
   SENDING: "Versand läuft",
   DONE: "Abgeschlossen",
   PAUSED: "Pausiert",
   CANCELLED: "Abgebrochen",
+};
+
+const JOB_LABEL: Record<string, string> = {
+  PENDING: "wartet",
+  SENDING: "wird gesendet",
+  SENT: "zugestellt",
+  FAILED: "fehlgeschlagen",
+  SKIPPED: "übersprungen",
+};
+
+const JOB_TONE: Record<string, "slate" | "blue" | "green" | "amber" | "red"> = {
+  PENDING: "slate",
+  SENDING: "blue",
+  SENT: "green",
+  FAILED: "red",
+  SKIPPED: "amber",
 };
 
 export default async function CampaignDetailPage({
@@ -61,19 +80,30 @@ export default async function CampaignDetailPage({
   });
   if (!campaign) notFound();
 
-  const [progress, failed, recent] = await Promise.all([
-    campaignProgress(id),
-    db.mailJob.findMany({
-      where: { campaignId: id, status: "FAILED" },
-      orderBy: { updatedAt: "desc" },
-      take: 25,
-    }),
-    db.mailJob.findMany({
-      where: { campaignId: id, status: "SENT" },
-      orderBy: { sentAt: "desc" },
-      take: 10,
-    }),
-  ]);
+  // Zwei Tabellen auf einer Seite, also zwei eigene Seitenzahlen. Eine
+  // Kampagne kann zehntausend Empfaenger haben — beide Listen werden
+  // seitenweise geholt, nie am Stueck.
+  const failedPage = Math.max(1, Number(flags.fehler ?? 1) || 1);
+  const recipientPage = Math.max(1, Number(flags.empfaenger ?? 1) || 1);
+
+  const [progress, failedTotal, failed, recipientTotal, recipients] =
+    await Promise.all([
+      campaignProgress(id),
+      db.mailJob.count({ where: { campaignId: id, status: "FAILED" } }),
+      db.mailJob.findMany({
+        where: { campaignId: id, status: "FAILED" },
+        orderBy: { updatedAt: "desc" },
+        skip: (failedPage - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      db.mailJob.count({ where: { campaignId: id } }),
+      db.mailJob.findMany({
+        where: { campaignId: id },
+        orderBy: [{ sentAt: "desc" }, { createdAt: "desc" }],
+        skip: (recipientPage - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+    ]);
 
   const mayCreate = can(user, "kampagnen.erstellen");
   const maySend = can(user, "kampagnen.senden");
@@ -198,7 +228,7 @@ export default async function CampaignDetailPage({
             </Card>
           ) : null}
 
-          {failed.length > 0 ? (
+          {failedTotal > 0 ? (
             <Card
               title={`Fehlgeschlagen (${progress.FAILED})`}
               description="Pro Empfänger festgehalten, warum die Zustellung nicht geklappt hat."
@@ -236,27 +266,59 @@ export default async function CampaignDetailPage({
                   ))}
                 </tbody>
               </Table>
+
+              <Pagination
+                page={failedPage}
+                pageSize={PAGE_SIZE}
+                total={failedTotal}
+                params={flags}
+                paramName="fehler"
+              />
             </Card>
           ) : null}
 
-          {recent.length > 0 ? (
-            <Card title="Zuletzt zugestellt">
-              <ul className="divide-y divide-slate-100 text-sm">
-                {recent.map((job) => (
-                  <li
-                    key={job.id}
-                    className="flex items-center justify-between py-1.5"
-                  >
-                    <span>
-                      {job.toName}{" "}
-                      <span className="text-slate-500">({job.toEmail})</span>
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {formatDateTime(job.sentAt)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+          {recipientTotal > 0 ? (
+            <Card
+              title={`Empfänger (${recipientTotal.toLocaleString("de-DE")})`}
+              description="Jeder Empfänger mit seinem Zustellstand."
+            >
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Empfänger</Th>
+                    <Th>Status</Th>
+                    <Th>Zeitpunkt</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recipients.map((job) => (
+                    <tr key={job.id}>
+                      <Td>
+                        <span className="font-medium">{job.toName}</span>
+                        <span className="block text-xs text-slate-500">
+                          {job.toEmail}
+                        </span>
+                      </Td>
+                      <Td>
+                        <Badge tone={JOB_TONE[job.status] ?? "slate"}>
+                          {JOB_LABEL[job.status] ?? job.status}
+                        </Badge>
+                      </Td>
+                      <Td className="text-xs text-slate-500">
+                        {formatDateTime(job.sentAt ?? job.createdAt)}
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+
+              <Pagination
+                page={recipientPage}
+                pageSize={PAGE_SIZE}
+                total={recipientTotal}
+                params={flags}
+                paramName="empfaenger"
+              />
             </Card>
           ) : null}
         </div>

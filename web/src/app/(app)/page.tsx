@@ -110,6 +110,11 @@ export default async function DashboardPage({
       <Card
         title="Letzte Kampagnen"
         description="Die fünf zuletzt angelegten Mailversände."
+        footer={
+          <a href="/kampagnen" className="text-sm text-brand-700 hover:underline">
+            Alle Kampagnen ansehen
+          </a>
+        }
       >
         {recent.length === 0 ? (
           <p className="py-6 text-center text-sm text-slate-500">

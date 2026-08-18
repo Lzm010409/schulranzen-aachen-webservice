@@ -7,8 +7,19 @@
 
 Die Übernahme ist **wiederholbar** und **trockenlauffähig**. Jeder übernommene
 Datensatz merkt sich seine alte ID (`legacyId`); ein zweiter Durchlauf
-aktualisiert, statt zu verdoppeln. Geschrieben wird in einer einzigen
-Transaktion — bricht etwas ab, bleibt die neue Datenbank unverändert.
+aktualisiert, statt zu verdoppeln.
+
+Gelesen und geschrieben wird **in Portionen** zu 250 Kunden, jede Portion in
+einer eigenen Transaktion. Das ist der Grund, warum auch Bestände jenseits von
+10.000 Datensätzen durchlaufen: eine einzige Transaktion darüber liefe
+minutenlang und hielte dabei Sperren auf halben Tabellen. Bricht ein Lauf in
+der Mitte ab, bleiben die bereits geschriebenen Portionen stehen — und weil der
+Import wiederholbar ist, setzt ein zweiter Lauf sauber darauf auf. Der
+Fortschritt wird währenddessen mitgeschrieben.
+
+> Gemessen auf einem Bestand mit 12.600 Altzeilen (12.000 Kunden, 12.600
+> Käufe): Übernahme rund 12 Sekunden, Wiederholungslauf rund 20 Sekunden,
+> Vorschau des CSV-Imports unter einer Sekunde.
 
 ---
 
@@ -212,11 +223,14 @@ Import → Kunden aus CSV oder Excel**.
   lassen sich vor dem Import korrigieren
 - **Erst Vorschau:** wie viele Kunden neu wären, wie viele ergänzt würden,
   wie viele Käufe entstehen, welche Produkte neu angelegt würden, und jede
-  Auffälligkeit mit Zeilennummer
+  Auffälligkeit mit Zeilennummer (angezeigt werden die ersten 200; die
+  Gesamtzahl steht daneben)
 - Dieselbe Zusammenführungsregel wie oben: mehrere Zeilen derselben Person
   werden zu **einem Kunden mit mehreren Käufen**
 - Wiederholtes Einlesen derselben Datei erzeugt keine Dubletten — bestehende
   Kunden werden ergänzt, identische Käufe übersprungen
+- Auch große Dateien laufen durch: gesucht und geschrieben wird portionsweise,
+  geprüft mit 12.600 Zeilen (rund 12 Sekunden)
 
 Erwartete Spalten (alle außer dem Namen optional):
 

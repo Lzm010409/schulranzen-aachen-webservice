@@ -19,9 +19,12 @@ import {
 } from "../actions";
 import { AccountEditor } from "./account-editor";
 import { ProviderEditor } from "./provider-editor";
+import { Pagination } from "@/components/pagination";
 
 export const metadata = { title: "Mailkonten" };
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 25;
 
 export default async function MailAccountsPage({
   searchParams,
@@ -31,16 +34,33 @@ export default async function MailAccountsPage({
   const user = await requirePermissionOrRedirect("mailkonten.verwalten");
   const flags = await searchParams;
 
-  const [accounts, providers] = await Promise.all([
-    db.mailAccount.findMany({
-      orderBy: [{ isDefault: "desc" }, { label: "asc" }],
-      include: { provider: true, _count: { select: { campaigns: true } } },
-    }),
-    db.provider.findMany({
-      orderBy: { name: "asc" },
-      include: { _count: { select: { accounts: true } } },
-    }),
-  ]);
+  // Zwei Tabellen auf einer Seite, also zwei eigene Seitenzahlen.
+  const accountPage = Math.max(1, Number(flags.konten ?? 1) || 1);
+  const providerPage = Math.max(1, Number(flags.provider ?? 1) || 1);
+
+  const [accountTotal, accounts, providerTotal, providers, providerChoices] =
+    await Promise.all([
+      db.mailAccount.count(),
+      db.mailAccount.findMany({
+        orderBy: [{ isDefault: "desc" }, { label: "asc" }],
+        include: { provider: true, _count: { select: { campaigns: true } } },
+        skip: (accountPage - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      db.provider.count(),
+      db.provider.findMany({
+        orderBy: { name: "asc" },
+        include: { _count: { select: { accounts: true } } },
+        skip: (providerPage - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      // Die Auswahl im Kontoformular braucht alle Provider, nicht nur die
+      // gerade angezeigte Seite.
+      db.provider.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      }),
+    ]);
 
   return (
     <div className="space-y-6">
@@ -59,14 +79,14 @@ export default async function MailAccountsPage({
       </Alert>
 
       <Card
-        title="Absenderkonten"
+        title={`Absenderkonten (${accountTotal})`}
         description="Ein Konto ist Standard und wird bei neuen Kampagnen vorausgewählt."
         footer={
           <AccountEditor
             trigger="Konto anlegen"
             variant="primary"
             account={null}
-            providers={providers.map((p) => ({ id: p.id, name: p.name }))}
+            providers={providerChoices}
           />
         }
       >
@@ -155,7 +175,7 @@ export default async function MailAccountsPage({
                           fromName: account.fromName,
                           isDefault: account.isDefault,
                         }}
-                        providers={providers.map((p) => ({
+                        providers={providerChoices.map((p) => ({
                           id: p.id,
                           name: p.name,
                         }))}
@@ -175,10 +195,18 @@ export default async function MailAccountsPage({
             </tbody>
           </Table>
         )}
+
+        <Pagination
+          page={accountPage}
+          pageSize={PAGE_SIZE}
+          total={accountTotal}
+          params={flags}
+          paramName="konten"
+        />
       </Card>
 
       <Card
-        title="Provider"
+        title={`Provider (${providerTotal})`}
         description="Server, Port und Verschlüsselung. Presets füllen die Felder korrekt vor."
         footer={<ProviderEditor trigger="Provider anlegen" provider={null} />}
       >
@@ -235,6 +263,14 @@ export default async function MailAccountsPage({
             </tbody>
           </Table>
         )}
+
+        <Pagination
+          page={providerPage}
+          pageSize={PAGE_SIZE}
+          total={providerTotal}
+          params={flags}
+          paramName="provider"
+        />
       </Card>
     </div>
   );

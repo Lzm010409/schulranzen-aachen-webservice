@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { buildWhere, type CustomerFilter } from "./customer-filter";
+import { chunk } from "./chunk";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type SkipReason =
@@ -13,6 +14,9 @@ export type EnqueueResult = {
   skipped: Record<SkipReason, number>;
   total: number;
 };
+
+/** Empfaenger je Anweisung beim Einreihen. */
+const ENQUEUE_CHUNK = 500;
 
 const EMPTY_SKIPS: Record<SkipReason, number> = {
   "keine E-Mail-Adresse": 0,
@@ -77,13 +81,15 @@ export async function enqueueRecipients(
     });
   }
 
+  // Portionsweise anlegen: eine Kampagne an 12.000 Kunden ergaebe sonst eine
+  // einzige Anweisung mit weit mehr Platzhaltern, als Postgres annimmt.
   let queued = 0;
-  if (rows.length > 0) {
+  for (const part of chunk(rows, ENQUEUE_CHUNK)) {
     const created = await db.mailJob.createMany({
-      data: rows,
+      data: part,
       skipDuplicates: true,
     });
-    queued = created.count;
+    queued += created.count;
   }
 
   return { queued, skipped, total: customers.length };

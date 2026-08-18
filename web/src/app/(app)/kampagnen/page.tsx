@@ -11,6 +11,7 @@ import {
   Th,
   formatDateTime,
 } from "@/components/ui";
+import { Pagination } from "@/components/pagination";
 
 export const metadata = { title: "Mailversand" };
 export const dynamic = "force-dynamic";
@@ -26,17 +27,29 @@ const STATUS: Record<
   CANCELLED: { label: "Abgebrochen", tone: "red" },
 };
 
-export default async function CampaignsPage() {
-  await requirePermissionOrRedirect("kampagnen.ansehen");
+const PAGE_SIZE = 25;
 
-  const campaigns = await db.campaign.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: {
-      createdBy: { select: { name: true } },
-      account: { select: { fromEmail: true } },
-    },
-  });
+export default async function CampaignsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  await requirePermissionOrRedirect("kampagnen.ansehen");
+  const params = await searchParams;
+  const page = Math.max(1, Number(params.seite ?? 1) || 1);
+
+  const [total, campaigns] = await Promise.all([
+    db.campaign.count(),
+    db.campaign.findMany({
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: {
+        createdBy: { select: { name: true } },
+        account: { select: { fromEmail: true } },
+      },
+    }),
+  ]);
 
   const counts = await db.mailJob.groupBy({
     by: ["campaignId", "status"],
@@ -60,7 +73,7 @@ export default async function CampaignsPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
-        description="Jede Kampagne behält ihr vollständiges Versandprotokoll."
+        description={`${total.toLocaleString("de-DE")} Kampagnen · Jede Kampagne behält ihr vollständiges Versandprotokoll.`}
         actions={
           <LinkButton href="/kunden" variant="primary">
             Empfänger auswählen
@@ -143,6 +156,13 @@ export default async function CampaignsPage() {
           </Table>
         )}
       </Card>
+
+      <Pagination
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        params={params}
+      />
     </div>
   );
 }

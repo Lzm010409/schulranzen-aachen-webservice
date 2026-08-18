@@ -8,6 +8,7 @@ import {
   normalizeName,
   normalizePhone,
   normalizeZip,
+  productSlug,
 } from "../normalize";
 import {
   IMPORT_FIELDS,
@@ -17,6 +18,12 @@ import {
   type ImportField,
   type Table,
 } from "./table";
+import {
+  LOOKUP_CHUNK,
+  WRITE_CHUNK,
+  chunk,
+  type ProgressReporter,
+} from "./batch";
 
 /**
  * Allgemeiner Kundenimport aus CSV oder Excel.
@@ -58,9 +65,18 @@ export type ImportPreview = {
   updatedCustomers: number;
   purchases: number;
   newProducts: string[];
+  /** Nur die ersten Auffaelligkeiten — bei 10.000 Zeilen sonst unlesbar. */
   issues: RowIssue[];
+  /** Wie viele es insgesamt sind. */
+  issueCount: number;
   sample: PreparedRow[];
 };
+
+/** So viele Auffaelligkeiten wandern in die Vorschau. */
+const PREVIEW_ISSUES = 200;
+
+/** So viele Beispielzeilen zeigt die Vorschau. */
+const PREVIEW_ROWS = 20;
 
 export async function readTable(
   filename: string,
@@ -203,14 +219,18 @@ export async function prepareImport(
  * E-Mail-Adresse, sonst ueber Name und PLZ. Zeilen derselben Person innerhalb
  * der Datei bekommen dieselbe Zuordnung, damit aus ihnen ein Kunde mit
  * mehreren Kaeufen wird statt mehrerer Kunden.
+ *
+ * Gesucht wird in Portionen. Bei 10.000 Zeilen entstuende sonst eine einzige
+ * Abfrage mit 10.000 ODER-Zweigen — die laesst Postgres zwar zu, plant sie
+ * aber katastrophal.
  */
 async function attachMatches(rows: PreparedRow[]): Promise<void> {
+  const byEmail = new Map<string, string>();
   const emails = [...new Set(rows.map((r) => r.email).filter(Boolean))] as string[];
 
-  const byEmail = new Map<string, string>();
-  if (emails.length > 0) {
+  for (const part of chunk(emails, LOOKUP_CHUNK)) {
     const found = await db.customer.findMany({
-      where: { deletedAt: null, email: { in: emails } },
+      where: { deletedAt: null, email: { in: part } },
       select: { id: true, email: true },
     });
     for (const customer of found) {
@@ -218,26 +238,32 @@ async function attachMatches(rows: PreparedRow[]): Promise<void> {
     }
   }
 
-  const nameKey = (row: PreparedRow) =>
+  const nameKey = (row: { firstName: string; lastName: string; zip: string }) =>
     `${row.firstName.toLowerCase()}|${row.lastName.toLowerCase()}|${row.zip}`;
 
-  const keys = [...new Set(rows.map(nameKey))];
+  // Dieselbe Person nur einmal suchen: in einer Datei mit 10.000 Zeilen
+  // stecken meist deutlich weniger verschiedene Namen.
+  const distinct = new Map<string, PreparedRow>();
+  for (const row of rows) {
+    const key = nameKey(row);
+    if (!distinct.has(key)) distinct.set(key, row);
+  }
+
   const byName = new Map<string, string>();
-  if (keys.length > 0) {
+  for (const part of chunk([...distinct.values()], LOOKUP_CHUNK)) {
     const candidates = await db.customer.findMany({
       where: {
         deletedAt: null,
-        OR: rows.map((row) => ({
+        OR: part.map((row) => ({
           firstName: { equals: row.firstName, mode: "insensitive" as const },
           lastName: { equals: row.lastName, mode: "insensitive" as const },
           zip: row.zip,
         })),
       },
       select: { id: true, firstName: true, lastName: true, zip: true },
-      take: 5000,
     });
     for (const candidate of candidates) {
-      const key = `${candidate.firstName.toLowerCase()}|${candidate.lastName.toLowerCase()}|${candidate.zip}`;
+      const key = nameKey(candidate);
       if (!byName.has(key)) byName.set(key, candidate.id);
     }
   }
@@ -302,20 +328,20 @@ export async function buildPreview(
   const { rows, issues } = await prepareImport(table, mapping);
   const groups = groupRows(rows);
 
-  const existingProducts = new Set(
-    (await db.product.findMany({ select: { name: true } })).map((p) =>
-      p.name.trim().toLowerCase(),
-    ),
+  // Nach Schluessel vergleichen, nicht nach Kleinschreibung: sonst gilt
+  // "ergobag  cubo" als neues Produkt, obwohl es dasselbe ist.
+  const existingSlugs = new Set(
+    (await db.product.findMany({ select: { slug: true } })).map((p) => p.slug),
   );
-  const newProducts = new Set<string>();
+  const newProducts = new Map<string, string>();
   let purchases = 0;
 
   for (const row of rows) {
-    if (row.product) {
-      purchases += 1;
-      if (!existingProducts.has(row.product.toLowerCase())) {
-        newProducts.add(row.product);
-      }
+    if (!row.product) continue;
+    purchases += 1;
+    const slug = productSlug(row.product);
+    if (slug && !existingSlugs.has(slug) && !newProducts.has(slug)) {
+      newProducts.set(slug, row.product);
     }
   }
 
@@ -330,9 +356,10 @@ export async function buildPreview(
     newCustomers: groups.length - updated,
     updatedCustomers: updated,
     purchases,
-    newProducts: [...newProducts],
-    issues,
-    sample: rows.slice(0, 20),
+    newProducts: [...newProducts.values()],
+    issues: issues.slice(0, PREVIEW_ISSUES),
+    issueCount: issues.length,
+    sample: rows.slice(0, PREVIEW_ROWS),
   };
 }
 
@@ -344,114 +371,237 @@ export type ImportOutcome = {
   issues: RowIssue[];
 };
 
+/** Ein Kunde, wie er nach dem Zusammenfassen der Zeilen geschrieben wird. */
+type CustomerWrite = {
+  group: PreparedRow[];
+  existingId: string | null;
+  data: {
+    firstName: string;
+    lastName: string;
+    street: string;
+    zip: string;
+    city: string;
+    email: string | null;
+    phone: string | null;
+    notes: string | null;
+  };
+};
+
+/**
+ * Innerhalb einer Gruppe gewinnt der erste nicht-leere Wert; so ergaenzen
+ * spaetere Zeilen fehlende Angaben, ohne gute zu ueberschreiben.
+ */
+function mergeGroup(group: PreparedRow[]): CustomerWrite {
+  const first = group[0];
+  return {
+    group,
+    existingId: group.find((row) => row.matchesCustomerId)?.matchesCustomerId ?? null,
+    data: {
+      firstName: first.firstName,
+      lastName: first.lastName,
+      street: group.find((r) => r.street !== "—")?.street ?? first.street,
+      zip: group.find((r) => r.zip)?.zip ?? first.zip,
+      city: group.find((r) => r.city !== "—")?.city ?? first.city,
+      email: group.find((r) => r.email)?.email ?? null,
+      phone: group.find((r) => r.phone)?.phone ?? null,
+      notes:
+        group
+          .map((r) => r.notes)
+          .filter(Boolean)
+          .join("\n") || null,
+    },
+  };
+}
+
+/**
+ * Legt alle vorkommenden Produkte einmal an, bevor die Kunden geschrieben
+ * werden. Produkte sind wenige und werden von vielen Zeilen geteilt — sie
+ * gehoeren nicht in die Schleife ueber zehntausend Zeilen.
+ */
+async function resolveProducts(
+  rows: PreparedRow[],
+): Promise<{ idBySlug: Map<string, string>; created: number }> {
+  const nameBySlug = new Map<string, string>();
+  for (const row of rows) {
+    if (!row.product) continue;
+    const slug = productSlug(row.product);
+    if (slug && !nameBySlug.has(slug)) nameBySlug.set(slug, row.product);
+  }
+
+  const idBySlug = new Map<string, string>();
+  const slugs = [...nameBySlug.keys()];
+
+  for (const part of chunk(slugs, LOOKUP_CHUNK)) {
+    const found = await db.product.findMany({
+      where: { slug: { in: part } },
+      select: { id: true, slug: true },
+    });
+    for (const product of found) idBySlug.set(product.slug, product.id);
+  }
+
+  let created = 0;
+  for (const [slug, name] of nameBySlug) {
+    if (idBySlug.has(slug)) continue;
+    const product = await findOrCreateProduct(name);
+    idBySlug.set(slug, product.id);
+    created += 1;
+  }
+
+  return { idBySlug, created };
+}
+
+/**
+ * Schreibt eine Portion Kunden samt ihrer Kaeufe in einer Transaktion.
+ *
+ * Die Kaeufe entstehen gesammelt: erst wird in einer Abfrage geholt, was
+ * bereits an diesen Kunden haengt, dann wird der Rest in einem Zug angelegt.
+ * Das ersetzt zwei Datenbankzugriffe je Kaufzeile.
+ */
+async function writeBatch(
+  batch: CustomerWrite[],
+  productIdBySlug: Map<string, string>,
+): Promise<{ created: number; updated: number; purchases: number }> {
+  return db.$transaction(
+    async (tx) => {
+      let created = 0;
+      let updated = 0;
+
+      const existingIds = batch
+        .map((entry) => entry.existingId)
+        .filter((id): id is string => Boolean(id));
+
+      const currentById = new Map(
+        (existingIds.length > 0
+          ? await tx.customer.findMany({ where: { id: { in: existingIds } } })
+          : []
+        ).map((customer) => [customer.id, customer]),
+      );
+
+      const customerIdByEntry = new Map<CustomerWrite, string>();
+
+      for (const entry of batch) {
+        const current = entry.existingId ? currentById.get(entry.existingId) : undefined;
+
+        if (entry.existingId && current) {
+          // Vorhandene Angaben nicht mit Leerwerten ueberschreiben.
+          await tx.customer.update({
+            where: { id: entry.existingId },
+            data: {
+              firstName: entry.data.firstName,
+              lastName: entry.data.lastName,
+              street: entry.data.street !== "—" ? entry.data.street : current.street,
+              zip: entry.data.zip || current.zip,
+              city: entry.data.city !== "—" ? entry.data.city : current.city,
+              email: entry.data.email ?? current.email,
+              phone: entry.data.phone ?? current.phone,
+              notes: entry.data.notes
+                ? [current.notes, entry.data.notes].filter(Boolean).join("\n")
+                : current.notes,
+            },
+          });
+          customerIdByEntry.set(entry, entry.existingId);
+          updated += 1;
+        } else {
+          const fresh = await tx.customer.create({ data: entry.data });
+          customerIdByEntry.set(entry, fresh.id);
+          created += 1;
+        }
+      }
+
+      // ---------------------------------------------------------- Kaeufe
+      const wanted: {
+        customerId: string;
+        productId: string;
+        purchasedAt: Date | null;
+      }[] = [];
+
+      for (const entry of batch) {
+        const customerId = customerIdByEntry.get(entry);
+        if (!customerId) continue;
+        for (const row of entry.group) {
+          if (!row.product) continue;
+          const productId = productIdBySlug.get(productSlug(row.product));
+          if (!productId) continue;
+          wanted.push({ customerId, productId, purchasedAt: row.purchasedAt });
+        }
+      }
+
+      if (wanted.length === 0) return { created, updated, purchases: 0 };
+
+      // Denselben Kauf nicht doppelt anlegen, wenn die Datei zweimal
+      // eingelesen wird — ein Zugriff je Portion statt einer je Kauf.
+      const seen = new Set<string>();
+      const key = (p: { customerId: string; productId: string; purchasedAt: Date | null }) =>
+        `${p.customerId}|${p.productId}|${p.purchasedAt?.toISOString() ?? ""}`;
+
+      const known = await tx.purchase.findMany({
+        where: { customerId: { in: [...new Set(wanted.map((p) => p.customerId))] } },
+        select: { customerId: true, productId: true, purchasedAt: true },
+      });
+      for (const purchase of known) seen.add(key(purchase));
+
+      const fresh = wanted.filter((purchase) => {
+        const id = key(purchase);
+        // Auch innerhalb der Datei: zwei gleiche Zeilen ergeben einen Kauf.
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+
+      // Auch hier portionsweise: eine Datei kann sehr viele Kaeufe fuer
+      // dieselbe Person enthalten, und ein INSERT hat eine Obergrenze an
+      // Platzhaltern.
+      for (const part of chunk(fresh, WRITE_CHUNK)) {
+        await tx.purchase.createMany({ data: part });
+      }
+
+      return { created, updated, purchases: fresh.length };
+    },
+    { timeout: 120_000, maxWait: 30_000 },
+  );
+}
+
 /**
  * Schreibt den Import. Eine Zeile ohne Produkt legt nur den Kunden an; mit
  * Produkt entsteht zusaetzlich ein Kauf.
+ *
+ * Geschrieben wird portionsweise, nicht in einer einzigen Transaktion: bei
+ * 10.000 Zeilen liefe die minutenlang und sperrte dabei den halben Bestand.
+ * Der Preis dafuer steht in MIGRATION.md — bricht der Lauf in der Mitte ab,
+ * bleiben die bereits geschriebenen Portionen stehen. Weil der Import
+ * wiederholbar ist, setzt ein zweiter Lauf sauber darauf auf.
  */
 export async function applyImport(
   table: Table,
   mapping: Record<ImportField, number>,
+  onProgress?: ProgressReporter,
 ): Promise<ImportOutcome> {
   const { rows, issues } = await prepareImport(table, mapping);
   const groups = groupRows(rows);
 
+  const { idBySlug, created: createdProducts } = await resolveProducts(rows);
+
   let createdCustomers = 0;
   let updatedCustomers = 0;
   let createdPurchases = 0;
-  const productIds = new Map<string, string>();
-  const productsBefore = await db.product.count();
+  let done = 0;
 
-  await db.$transaction(
-    async (tx) => {
-      for (const group of groups) {
-        const first = group[0];
-        const existingId =
-          group.find((row) => row.matchesCustomerId)?.matchesCustomerId ?? null;
+  const entries = groups.map(mergeGroup);
 
-        // Innerhalb einer Gruppe gewinnt der erste nicht-leere Wert; so
-        // ergaenzen spaetere Zeilen fehlende Angaben, ohne gute zu ueberschreiben.
-        const merged = {
-          firstName: first.firstName,
-          lastName: first.lastName,
-          street: group.find((r) => r.street !== "—")?.street ?? first.street,
-          zip: group.find((r) => r.zip)?.zip ?? first.zip,
-          city: group.find((r) => r.city !== "—")?.city ?? first.city,
-          email: group.find((r) => r.email)?.email ?? null,
-          phone: group.find((r) => r.phone)?.phone ?? null,
-          notes:
-            group
-              .map((r) => r.notes)
-              .filter(Boolean)
-              .join("\n") || null,
-        };
-
-        let customerId: string;
-        if (existingId) {
-          // Vorhandene Angaben nicht mit Leerwerten ueberschreiben.
-          const current = await tx.customer.findUniqueOrThrow({
-            where: { id: existingId },
-          });
-          await tx.customer.update({
-            where: { id: existingId },
-            data: {
-              firstName: merged.firstName,
-              lastName: merged.lastName,
-              street: merged.street !== "—" ? merged.street : current.street,
-              zip: merged.zip || current.zip,
-              city: merged.city !== "—" ? merged.city : current.city,
-              email: merged.email ?? current.email,
-              phone: merged.phone ?? current.phone,
-              notes: merged.notes
-                ? [current.notes, merged.notes].filter(Boolean).join("\n")
-                : current.notes,
-            },
-          });
-          customerId = existingId;
-          updatedCustomers += 1;
-        } else {
-          const created = await tx.customer.create({ data: merged });
-          customerId = created.id;
-          createdCustomers += 1;
-        }
-
-        for (const row of group) {
-          if (!row.product) continue;
-
-          let productId = productIds.get(row.product.toLowerCase());
-          if (!productId) {
-            const product = await findOrCreateProduct(row.product, tx);
-            productId = product.id;
-            productIds.set(row.product.toLowerCase(), productId);
-          }
-
-          // Denselben Kauf nicht doppelt anlegen, wenn die Datei zweimal
-          // eingelesen wird.
-          const duplicate = await tx.purchase.findFirst({
-            where: {
-              customerId,
-              productId,
-              purchasedAt: row.purchasedAt,
-            },
-          });
-          if (duplicate) continue;
-
-          await tx.purchase.create({
-            data: { customerId, productId, purchasedAt: row.purchasedAt },
-          });
-          createdPurchases += 1;
-        }
-      }
-    },
-    { timeout: 10 * 60 * 1000, maxWait: 60_000 },
-  );
-
-  const productsAfter = await db.product.count();
+  for (const batch of chunk(entries, WRITE_CHUNK)) {
+    const outcome = await writeBatch(batch, idBySlug);
+    createdCustomers += outcome.created;
+    updatedCustomers += outcome.updated;
+    createdPurchases += outcome.purchases;
+    done += batch.length;
+    onProgress?.(done, entries.length);
+  }
 
   return {
     createdCustomers,
     updatedCustomers,
     createdPurchases,
-    createdProducts: productsAfter - productsBefore,
+    createdProducts,
     issues,
   };
 }

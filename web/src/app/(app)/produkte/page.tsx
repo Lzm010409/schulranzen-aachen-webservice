@@ -10,6 +10,7 @@ import {
   Td,
   Th,
 } from "@/components/ui";
+import { Pagination } from "@/components/pagination";
 import { deleteProductAction } from "./actions";
 import { ProductEditor } from "./product-editor";
 import { MergeForm } from "./merge-form";
@@ -17,19 +18,42 @@ import { MergeForm } from "./merge-form";
 export const metadata = { title: "Produkte" };
 export const dynamic = "force-dynamic";
 
-export default async function ProductsPage() {
+const PAGE_SIZE = 50;
+
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requirePermissionOrRedirect("produkte.ansehen");
   const mayManage = can(user, "produkte.verwalten");
+  const params = await searchParams;
+  const page = Math.max(1, Number(params.seite ?? 1) || 1);
 
-  const products = await db.product.findMany({
-    orderBy: [{ active: "desc" }, { name: "asc" }],
-    include: { _count: { select: { purchases: true } } },
-  });
+  const [total, products, mergeChoices] = await Promise.all([
+    db.product.count(),
+    db.product.findMany({
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+      include: { _count: { select: { purchases: true } } },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    // Zum Zusammenführen braucht die Auswahl alle Produkte, nicht nur die
+    // Seite — sonst liesse sich nur innerhalb einer Seite zusammenfassen.
+    db.product.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        _count: { select: { purchases: true } },
+      },
+    }),
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
-        description="Der Katalog hinter den Käufen. Gleiche Namen werden über einen normalisierten Schlüssel zusammengehalten."
+        description={`${total.toLocaleString("de-DE")} Produkte · Der Katalog hinter den Käufen. Gleiche Namen werden über einen normalisierten Schlüssel zusammengehalten.`}
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -116,6 +140,13 @@ export default async function ProductsPage() {
               </Table>
             )}
           </Card>
+
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            params={params}
+          />
         </div>
 
         {mayManage ? (
@@ -133,7 +164,7 @@ export default async function ProductsPage() {
             description="Alle Käufe der Quelle wandern zum Ziel, die Quelle wird gelöscht."
           >
             <MergeForm
-              products={products.map((p) => ({
+              products={mergeChoices.map((p) => ({
                 id: p.id,
                 name: p.name,
                 count: p._count.purchases,

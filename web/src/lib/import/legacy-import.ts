@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { LEGACY_SCHEMA_SQL } from "./legacy-schema";
 import { readLegacy } from "./read-legacy";
 import { transform, type TransformResult } from "./transform";
+import { WRITE_CHUNK, chunk } from "./batch";
 import type { PrismaClient } from "@/generated/prisma/client";
 
 /**
@@ -120,18 +121,28 @@ export function restoreDump(dumpFile: string, databaseUrl: string): void {
 }
 
 /**
- * Schreibt das Ergebnis in einer Transaktion. `legacyId` macht den Lauf
- * wiederholbar: bereits uebernommene Datensaetze werden aktualisiert statt
- * ein zweites Mal angelegt.
+ * Schreibt das Ergebnis portionsweise. `legacyId` macht den Lauf wiederholbar:
+ * bereits uebernommene Datensaetze werden aktualisiert statt ein zweites Mal
+ * angelegt.
+ *
+ * Portionsweise und nicht am Stueck, weil ein Altbestand ueber 10.000 Kunden
+ * haben kann. Eine einzige Transaktion darueber liefe minutenlang und hielte
+ * dabei Sperren auf halben Tabellen; bricht sie ab, war alles umsonst. Jede
+ * Portion ist fuer sich vollstaendig — bricht der Lauf in der Mitte ab,
+ * bleiben die geschriebenen Portionen stehen und ein zweiter Lauf setzt sauber
+ * darauf auf.
  */
 export async function writeResult(
   db: PrismaClient,
   result: TransformResult,
+  onProgress?: (done: number, total: number) => void,
 ): Promise<void> {
+  // Produkte, Provider und Vorlagen sind wenige und werden von allen Kunden
+  // geteilt — sie kommen zuerst, in einer eigenen Transaktion.
+  const productIdBySlug = new Map<string, string>();
+
   await db.$transaction(
     async (tx) => {
-      const productIdBySlug = new Map<string, string>();
-
       for (const product of result.products) {
         const saved = await tx.product.upsert({
           where: { slug: product.slug },
@@ -143,52 +154,6 @@ export async function writeResult(
           },
         });
         productIdBySlug.set(product.slug, saved.id);
-      }
-
-      for (const customer of result.customers) {
-        const data = {
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          street: customer.street,
-          zip: customer.zip,
-          city: customer.city,
-          email: customer.email,
-          phone: customer.phone,
-          notes: customer.notes,
-        };
-
-        const saved = await tx.customer.upsert({
-          where: { legacyId: customer.legacyId },
-          update: data,
-          create: { ...data, legacyId: customer.legacyId },
-        });
-
-        for (const purchase of customer.purchases) {
-          const productId = purchase.productSlug
-            ? productIdBySlug.get(purchase.productSlug)
-            : undefined;
-          // Ohne Produkt gibt es keinen Kauf — die Beziehung ist Pflicht.
-          if (!productId) continue;
-
-          await tx.purchase.upsert({
-            where: { legacyId: purchase.legacyKundeId },
-            // customerId gehoert auch in den Update-Zweig: aendert sich im
-            // Altsystem etwas, das die Zusammenfuehrung verschiebt (etwa eine
-            // nachgetragene E-Mail), muss der Kauf beim zweiten Lauf zum
-            // richtigen Kunden wandern.
-            update: {
-              customerId: saved.id,
-              productId,
-              purchasedAt: purchase.purchasedAt,
-            },
-            create: {
-              legacyId: purchase.legacyKundeId,
-              customerId: saved.id,
-              productId,
-              purchasedAt: purchase.purchasedAt,
-            },
-          });
-        }
       }
 
       for (const provider of result.providers) {
@@ -244,7 +209,128 @@ export async function writeResult(
         });
       }
     },
-    { timeout: 15 * 60 * 1000, maxWait: 60_000 },
+    { timeout: 5 * 60 * 1000, maxWait: 60_000 },
+  );
+
+  // ------------------------------------------------------ Kunden und Kaeufe
+  let done = 0;
+  for (const batch of chunk(result.customers, WRITE_CHUNK)) {
+    await writeCustomerBatch(db, batch, productIdBySlug);
+    done += batch.length;
+    onProgress?.(done, result.customers.length);
+  }
+}
+
+/** Eine Portion Kunden samt ihrer Kaeufe, in einer Transaktion. */
+async function writeCustomerBatch(
+  db: PrismaClient,
+  batch: TransformResult["customers"],
+  productIdBySlug: Map<string, string>,
+): Promise<void> {
+  await db.$transaction(
+    async (tx) => {
+      // Was von dieser Portion schon einmal uebernommen wurde, in einem Zug
+      // holen statt einmal je Kunde.
+      const known = new Map(
+        (
+          await tx.customer.findMany({
+            where: { legacyId: { in: batch.map((c) => c.legacyId) } },
+            select: { id: true, legacyId: true },
+          })
+        ).map((customer) => [customer.legacyId?.toString() ?? "", customer.id]),
+      );
+
+      const customerIdByLegacy = new Map<string, string>();
+
+      for (const customer of batch) {
+        const data = {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          street: customer.street,
+          zip: customer.zip,
+          city: customer.city,
+          email: customer.email,
+          phone: customer.phone,
+          notes: customer.notes,
+        };
+
+        const existingId = known.get(customer.legacyId.toString());
+        if (existingId) {
+          await tx.customer.update({ where: { id: existingId }, data });
+          customerIdByLegacy.set(customer.legacyId.toString(), existingId);
+        } else {
+          const created = await tx.customer.create({
+            data: { ...data, legacyId: customer.legacyId },
+          });
+          customerIdByLegacy.set(customer.legacyId.toString(), created.id);
+        }
+      }
+
+      // ---------------------------------------------------------- Kaeufe
+      const wanted: {
+        legacyId: bigint;
+        customerId: string;
+        productId: string;
+        purchasedAt: Date | null;
+      }[] = [];
+
+      for (const customer of batch) {
+        const customerId = customerIdByLegacy.get(customer.legacyId.toString());
+        if (!customerId) continue;
+        for (const purchase of customer.purchases) {
+          const productId = purchase.productSlug
+            ? productIdBySlug.get(purchase.productSlug)
+            : undefined;
+          // Ohne Produkt gibt es keinen Kauf — die Beziehung ist Pflicht.
+          if (!productId) continue;
+          wanted.push({
+            legacyId: purchase.legacyKundeId,
+            customerId,
+            productId,
+            purchasedAt: purchase.purchasedAt,
+          });
+        }
+      }
+
+      if (wanted.length === 0) return;
+
+      const existingPurchases = new Map(
+        (
+          await tx.purchase.findMany({
+            where: { legacyId: { in: wanted.map((p) => p.legacyId) } },
+            select: { id: true, legacyId: true },
+          })
+        ).map((purchase) => [purchase.legacyId?.toString() ?? "", purchase.id]),
+      );
+
+      const fresh: typeof wanted = [];
+      for (const purchase of wanted) {
+        const existingId = existingPurchases.get(purchase.legacyId.toString());
+        if (!existingId) {
+          fresh.push(purchase);
+          continue;
+        }
+        // customerId gehoert auch in den Update-Zweig: aendert sich im
+        // Altsystem etwas, das die Zusammenfuehrung verschiebt (etwa eine
+        // nachgetragene E-Mail), muss der Kauf beim zweiten Lauf zum
+        // richtigen Kunden wandern.
+        await tx.purchase.update({
+          where: { id: existingId },
+          data: {
+            customerId: purchase.customerId,
+            productId: purchase.productId,
+            purchasedAt: purchase.purchasedAt,
+          },
+        });
+      }
+
+      // Auch hier portionsweise: ein INSERT hat eine Obergrenze an
+      // Platzhaltern, und ein Kunde kann viele Kaeufe mitbringen.
+      for (const part of chunk(fresh, WRITE_CHUNK)) {
+        await tx.purchase.createMany({ data: part });
+      }
+    },
+    { timeout: 120_000, maxWait: 30_000 },
   );
 }
 
@@ -377,8 +463,14 @@ export async function runLegacyImport(input: {
     const result = transform(legacy);
 
     if (!dryRun) {
-      say("Schreibe…");
-      await writeResult(db, result);
+      say(`Schreibe ${result.customers.length} Kunden…`);
+      await writeResult(db, result, (done, total) => {
+        // Nicht nach jeder Portion melden — bei 10.000 Kunden waeren das
+        // vierzig Zeilen Protokoll; alle 1.000 reicht zum Mitverfolgen.
+        if (done % 1000 < WRITE_CHUNK || done === total) {
+          say(`  ${done} von ${total} Kunden geschrieben`);
+        }
+      });
     }
 
     const report = buildReport(result, dryRun);

@@ -1,20 +1,32 @@
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { Badge, Card, Table, Td, Th, formatDateTime } from "@/components/ui";
+import { Pagination } from "@/components/pagination";
 import { PasswordForm } from "./password-form";
 
 export const metadata = { title: "Mein Konto" };
 export const dynamic = "force-dynamic";
 
-export default async function AccountPage() {
-  const user = await requireUser();
+const PAGE_SIZE = 10;
 
-  const [record, sessions] = await Promise.all([
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const user = await requireUser();
+  const params = await searchParams;
+  const page = Math.max(1, Number(params.seite ?? 1) || 1);
+
+  const where = { userId: user.id, expiresAt: { gt: new Date() } };
+  const [record, sessionTotal, sessions] = await Promise.all([
     db.user.findUniqueOrThrow({ where: { id: user.id } }),
+    db.session.count({ where }),
     db.session.findMany({
-      where: { userId: user.id, expiresAt: { gt: new Date() } },
+      where,
       orderBy: { createdAt: "desc" },
-      take: 10,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
   ]);
 
@@ -63,7 +75,7 @@ export default async function AccountPage() {
       </Card>
 
       <Card
-        title="Aktive Sitzungen"
+        title={`Aktive Sitzungen (${sessionTotal})`}
         description="Angemeldete Geräte dieses Kontos."
       >
         <Table>
@@ -90,6 +102,13 @@ export default async function AccountPage() {
             ))}
           </tbody>
         </Table>
+
+        <Pagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={sessionTotal}
+          params={params}
+        />
       </Card>
     </div>
   );

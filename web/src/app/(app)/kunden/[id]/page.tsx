@@ -15,6 +15,7 @@ import {
   formatDate,
   formatDateTime,
 } from "@/components/ui";
+import { Pagination } from "@/components/pagination";
 import {
   deleteCustomerAction,
   restoreCustomerAction,
@@ -22,6 +23,8 @@ import {
 } from "../actions";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 20;
 
 export default async function CustomerDetailPage({
   params,
@@ -34,29 +37,47 @@ export default async function CustomerDetailPage({
   const { id } = await params;
   const flags = await searchParams;
 
-  const customer = await db.customer.findUnique({
-    where: { id },
-    include: {
-      purchases: {
-        orderBy: [{ purchasedAt: "desc" }, { createdAt: "desc" }],
-        include: { product: true },
-      },
-      mailJobs: {
-        orderBy: { createdAt: "desc" },
-        take: 10,
-        include: { campaign: { select: { id: true, name: true } } },
-      },
-    },
-  });
+  // Drei Tabellen auf einer Seite, also drei eigene Seitenzahlen.
+  const purchasePage = Math.max(1, Number(flags.kaeufe ?? 1) || 1);
+  const mailPage = Math.max(1, Number(flags.mails ?? 1) || 1);
+  const historyPage = Math.max(1, Number(flags.verlauf ?? 1) || 1);
 
+  const customer = await db.customer.findUnique({ where: { id } });
   if (!customer) notFound();
 
-  const history = await db.auditLog.findMany({
-    where: { entity: "Customer", entityId: id },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    include: { user: { select: { name: true } } },
-  });
+  const [
+    purchaseTotal,
+    purchases,
+    mailTotal,
+    mailJobs,
+    historyTotal,
+    history,
+  ] = await Promise.all([
+    db.purchase.count({ where: { customerId: id } }),
+    db.purchase.findMany({
+      where: { customerId: id },
+      orderBy: [{ purchasedAt: "desc" }, { createdAt: "desc" }],
+      include: { product: true },
+      skip: (purchasePage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    db.mailJob.count({ where: { customerId: id } }),
+    db.mailJob.findMany({
+      where: { customerId: id },
+      orderBy: { createdAt: "desc" },
+      include: { campaign: { select: { id: true, name: true } } },
+      skip: (mailPage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    db.auditLog.count({ where: { entity: "Customer", entityId: id } }),
+    db.auditLog.findMany({
+      where: { entity: "Customer", entityId: id },
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { name: true } } },
+      skip: (historyPage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+  ]);
 
   const fullName = `${customer.firstName} ${customer.lastName}`;
 
@@ -137,8 +158,8 @@ export default async function CustomerDetailPage({
             </dl>
           </Card>
 
-          <Card title="Käufe" description={`${customer.purchases.length} erfasst`}>
-            {customer.purchases.length === 0 ? (
+          <Card title="Käufe" description={`${purchaseTotal} erfasst`}>
+            {purchases.length === 0 ? (
               <p className="py-4 text-center text-sm text-slate-500">
                 Noch kein Kauf hinterlegt.
               </p>
@@ -151,7 +172,7 @@ export default async function CustomerDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {customer.purchases.map((purchase) => (
+                  {purchases.map((purchase) => (
                     <tr key={purchase.id}>
                       <Td>{purchase.product.name}</Td>
                       <Td className="text-slate-600">
@@ -162,10 +183,18 @@ export default async function CustomerDetailPage({
                 </tbody>
               </Table>
             )}
+
+            <Pagination
+              page={purchasePage}
+              pageSize={PAGE_SIZE}
+              total={purchaseTotal}
+              params={flags}
+              paramName="kaeufe"
+            />
           </Card>
 
-          <Card title="Mailhistorie" description="Die letzten zehn Versände.">
-            {customer.mailJobs.length === 0 ? (
+          <Card title="Mailhistorie" description={`${mailTotal} Versände`}>
+            {mailJobs.length === 0 ? (
               <p className="py-4 text-center text-sm text-slate-500">
                 An diesen Kunden wurde noch nichts versendet.
               </p>
@@ -179,7 +208,7 @@ export default async function CustomerDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {customer.mailJobs.map((job) => (
+                  {mailJobs.map((job) => (
                     <tr key={job.id}>
                       <Td>
                         <a
@@ -200,6 +229,14 @@ export default async function CustomerDetailPage({
                 </tbody>
               </Table>
             )}
+
+            <Pagination
+              page={mailPage}
+              pageSize={PAGE_SIZE}
+              total={mailTotal}
+              params={flags}
+              paramName="mails"
+            />
           </Card>
         </div>
 
@@ -248,7 +285,7 @@ export default async function CustomerDetailPage({
             </Card>
           ) : null}
 
-          <Card title="Änderungshistorie">
+          <Card title={`Änderungshistorie (${historyTotal})`}>
             {history.length === 0 ? (
               <p className="text-sm text-slate-500">Keine Einträge.</p>
             ) : (
@@ -269,6 +306,14 @@ export default async function CustomerDetailPage({
                 ))}
               </ul>
             )}
+
+            <Pagination
+              page={historyPage}
+              pageSize={PAGE_SIZE}
+              total={historyTotal}
+              params={flags}
+              paramName="verlauf"
+            />
           </Card>
         </div>
       </div>

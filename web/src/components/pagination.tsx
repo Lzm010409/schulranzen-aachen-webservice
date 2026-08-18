@@ -1,5 +1,15 @@
 import { cx } from "./ui";
 
+/**
+ * Seitenweises Blaettern unter einer Tabelle.
+ *
+ * `paramName` trennt mehrere Tabellen auf einer Seite: die Kundenakte hat
+ * Kaeufe, Mailhistorie und Aenderungen nebeneinander, und jede Tabelle blaettert
+ * fuer sich, ohne die anderen zurueckzusetzen.
+ *
+ * Passt alles auf eine Seite, bleiben die Knoepfe weg — die Zeile mit der
+ * Anzahl bleibt trotzdem stehen, damit erkennbar ist, dass nichts fehlt.
+ */
 export function Pagination({
   page,
   pageSize,
@@ -14,19 +24,30 @@ export function Pagination({
   paramName?: string;
 }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
-  if (pages <= 1) return null;
+  if (total === 0) return null;
+
+  // Wer eine Seitenzahl von Hand in die Adresse schreibt, soll keine
+  // unsinnige Zeile lesen ("1001–3 von 3"); die Knoepfe fuehren zurueck.
+  const current = Math.min(Math.max(1, page), pages);
 
   function hrefFor(target: number) {
     const search = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
-      if (typeof value === "string" && key !== paramName) search.set(key, value);
+      if (key === paramName) continue;
+      // Mehrfach gesetzte Filter (etwa mehrere Produkte) duerfen beim
+      // Blaettern nicht auf den ersten Wert zusammenfallen.
+      if (Array.isArray(value)) {
+        for (const entry of value) search.append(key, entry);
+      } else if (typeof value === "string") {
+        search.set(key, value);
+      }
     }
     search.set(paramName, String(target));
     return `?${search}`;
   }
 
-  const first = (page - 1) * pageSize + 1;
-  const last = Math.min(page * pageSize, total);
+  const first = (current - 1) * pageSize + 1;
+  const last = Math.min(current * pageSize, total);
 
   // Fenster um die aktuelle Seite, damit auch 200 Seiten bedienbar bleiben.
   const windowSize = 2;
@@ -35,7 +56,7 @@ export function Pagination({
     if (
       i === 1 ||
       i === pages ||
-      (i >= page - windowSize && i <= page + windowSize)
+      (i >= current - windowSize && i <= current + windowSize)
     ) {
       numbers.push(i);
     } else if (numbers[numbers.length - 1] !== "…") {
@@ -49,13 +70,14 @@ export function Pagination({
         {first.toLocaleString("de-DE")}–{last.toLocaleString("de-DE")} von{" "}
         {total.toLocaleString("de-DE")}
       </p>
+      {pages <= 1 ? null : (
       <div className="flex flex-wrap items-center gap-1">
         <a
-          href={hrefFor(Math.max(1, page - 1))}
-          aria-disabled={page === 1}
+          href={hrefFor(Math.max(1, current - 1))}
+          aria-disabled={current === 1}
           className={cx(
             "btn btn-secondary",
-            page === 1 && "pointer-events-none opacity-50",
+            current === 1 && "pointer-events-none opacity-50",
           )}
         >
           Zurück
@@ -71,7 +93,7 @@ export function Pagination({
               href={hrefFor(entry)}
               className={cx(
                 "btn",
-                entry === page ? "btn-primary" : "btn-secondary",
+                entry === current ? "btn-primary" : "btn-secondary",
               )}
             >
               {entry}
@@ -79,16 +101,17 @@ export function Pagination({
           ),
         )}
         <a
-          href={hrefFor(Math.min(pages, page + 1))}
-          aria-disabled={page === pages}
+          href={hrefFor(Math.min(pages, current + 1))}
+          aria-disabled={current === pages}
           className={cx(
             "btn btn-secondary",
-            page === pages && "pointer-events-none opacity-50",
+            current === pages && "pointer-events-none opacity-50",
           )}
         >
           Weiter
         </a>
       </div>
+      )}
     </nav>
   );
 }

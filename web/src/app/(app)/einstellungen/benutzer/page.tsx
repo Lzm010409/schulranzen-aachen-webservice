@@ -10,6 +10,7 @@ import {
   Th,
   formatDateTime,
 } from "@/components/ui";
+import { Pagination } from "@/components/pagination";
 import { PERMISSIONS } from "@/lib/permissions";
 import { deleteUserAction } from "../actions";
 import { UserEditor } from "./user-editor";
@@ -17,8 +18,16 @@ import { UserEditor } from "./user-editor";
 export const metadata = { title: "Benutzer" };
 export const dynamic = "force-dynamic";
 
-export default async function UsersPage() {
+const PAGE_SIZE = 25;
+
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const current = await requireUser();
+  const params = await searchParams;
+  const page = Math.max(1, Number(params.seite ?? 1) || 1);
 
   if (current.role !== "ADMIN") {
     return (
@@ -28,9 +37,14 @@ export default async function UsersPage() {
     );
   }
 
-  const users = await db.user.findMany({
-    orderBy: [{ active: "desc" }, { name: "asc" }],
-  });
+  const [total, users] = await Promise.all([
+    db.user.count(),
+    db.user.findMany({
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+  ]);
 
   const totalPermissions = PERMISSIONS.reduce(
     (sum, group) => sum + group.items.length,
@@ -40,7 +54,7 @@ export default async function UsersPage() {
   return (
     <div className="space-y-6">
       <Card
-        title="Benutzer"
+        title={`Benutzer (${total})`}
         description="Jede Person bekommt ein eigenes Konto. Die Rechte legen fest, was sie sehen und ändern darf — nur so ist im Protokoll nachvollziehbar, wer was getan hat."
         footer={
           <UserEditor
@@ -122,6 +136,13 @@ export default async function UsersPage() {
             ))}
           </tbody>
         </Table>
+
+        <Pagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={total}
+          params={params}
+        />
       </Card>
 
       <Card

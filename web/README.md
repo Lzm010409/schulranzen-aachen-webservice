@@ -23,11 +23,25 @@ PostgreSQL 16 · Tailwind 4 · Nodemailer
 | Kunde ↔ Produkt | genau ein Produkt je Kunde | `Customer` + `Purchase`: mehrere Käufe je Kunde |
 | Produkte | Freitext legte bei jedem Speichern ein Duplikat an | eindeutiger Schlüssel, Zusammenführen im UI |
 | Export | Temp-Datei, komplett in den Speicher, `,`-getrennt | Streaming, Excel-tauglich (`;` + BOM), CSV-Injection entschärft, XLSX |
+| Listen | alles auf einer Seite | jede Tabelle blättert seitenweise, Seitenzahl steht in der URL |
 | Löschen | endgültig | Soft-Delete mit Wiederherstellung |
 | Nachvollziehbarkeit | keine | Änderungshistorie, Export- und Versandprotokoll |
 | Konfiguration | `file:/Users/lukegollenstede/Downloads/db.properties` | Umgebungsvariablen, beim Start validiert |
 
 ---
+
+## Listen und Tabellen
+
+Jede Tabelle der Oberfläche blättert seitenweise: Kunden, Produkte, Vorlagen,
+Kampagnen, Benutzer, Mailkonten, Provider, Protokoll, Sitzungen, bisherige
+Übernahmen — ebenso die Tabellen auf den Detailseiten (Käufe, Mailhistorie und
+Änderungen einer Kundenakte, Empfänger und Fehlversuche einer Kampagne, frühere
+Fassungen einer Vorlage).
+
+Unter jeder Tabelle steht, welcher Ausschnitt gerade zu sehen ist
+(„51–100 von 12.000"). Stehen mehrere Tabellen auf einer Seite, hat jede ihre
+eigene Seitenzahl und stört die anderen nicht. Die Seitenzahl steht in der URL
+und übersteht Filter, Sortierung und einen Reload.
 
 ## Oberfläche
 
@@ -86,7 +100,7 @@ openssl rand -base64 32       # für ENCRYPTION_KEY (muss genau 32 Byte sein)
 ## Tests
 
 ```bash
-npm test                      # 112 Tests: Normalisierung, Mailaufbau, Export,
+npm test                      # 117 Tests: Normalisierung, Mailaufbau, Export,
                               # SMTP-Fehler, Rechte, Import, Versandstrecke
 npm run typecheck
 
@@ -94,6 +108,7 @@ npm run typecheck
 node scripts/smoke.mjs http://localhost:3000              # 25 Prüfungen
 node scripts/permissions-check.mjs http://localhost:3000  # 16 Prüfungen
 node scripts/import-check.mjs http://localhost:3000 legacy.dump  # 18 Prüfungen
+node scripts/pagination-check.mjs http://localhost:3000          # 17 Prüfungen
 
 # Beispieldateien gegen ihre Beschreibung prüfen (leert dabei den Bestand,
 # deshalb nur gegen eine eigene Testdatenbank laufen lassen)
@@ -142,6 +157,8 @@ scripts/
   import-check.mjs        prüft beide Importwege am laufenden System
   beispieldaten.ts        erzeugt die Beispieldateien
   beispieldaten-check.mjs prüft die Beispieldateien gegen ihre Beschreibung
+  pagination-check.mjs    prüft, dass jede Tabelle seitenweise blättert
+  gross-check.mjs         Import mit 12.600 Zeilen am laufenden System
   etl/import.ts           Übernahme aus dem Altsystem (Kommandozeile)
 ```
 

@@ -125,10 +125,13 @@ export function TableImportForm() {
               </ul>
             </Alert>
 
-            {preview.issues.length > 0 ? (
+            {preview.issueCount > 0 ? (
               <details>
                 <summary style={{ cursor: "pointer", fontWeight: 500 }}>
-                  {preview.issues.length} Auffälligkeiten anzeigen
+                  {preview.issueCount} Auffälligkeiten anzeigen
+                  {preview.issueCount > preview.issues.length
+                    ? ` (die ersten ${preview.issues.length})`
+                    : ""}
                 </summary>
                 <Table>
                   <thead>
@@ -139,7 +142,7 @@ export function TableImportForm() {
                     </tr>
                   </thead>
                   <tbody>
-                    {preview.issues.slice(0, 100).map((issue, index) => (
+                    {preview.issues.map((issue, index) => (
                       <tr key={index}>
                         <Td>{issue.row}</Td>
                         <Td className="muted">{issue.field ?? "—"}</Td>
