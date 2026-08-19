@@ -226,7 +226,7 @@ export async function setUnsubscribedAction(formData: FormData): Promise<void> {
 
 /** Speichert den aktuellen Filterstand als wiederverwendbares Segment. */
 export async function saveSegmentAction(formData: FormData): Promise<void> {
-  await requirePermission("kunden.ansehen");
+  const user = await requirePermission("kunden.ansehen");
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
     await flash.fehler("Das Segment braucht einen Namen.");
@@ -242,25 +242,42 @@ export async function saveSegmentAction(formData: FormData): Promise<void> {
     ),
   );
 
-  await db.segment.upsert({
+  const gespeichert = await db.segment.upsert({
     where: { name },
     update: { filter },
     create: { name, filter },
   });
 
+  await recordAudit({
+    userId: user.id,
+    entity: "Segment",
+    entityId: gespeichert.id,
+    action: "CREATE",
+    diff: { name, filter },
+  });
   await flash.gespeichert("Segment", name);
   revalidatePath("/kunden");
 }
 
 export async function deleteSegmentAction(formData: FormData): Promise<void> {
-  await requirePermission("kunden.ansehen");
+  const user = await requirePermission("kunden.ansehen");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const removed = await db.segment
     .delete({ where: { id } })
     .catch(() => null);
 
-  if (removed) await flash.geloescht("Segment", removed.name);
-  else await flash.fehler("Das Segment gibt es nicht mehr.");
+  if (removed) {
+    await recordAudit({
+      userId: user.id,
+      entity: "Segment",
+      entityId: id,
+      action: "DELETE",
+      diff: { name: removed.name },
+    });
+    await flash.geloescht("Segment", removed.name);
+  } else {
+    await flash.fehler("Das Segment gibt es nicht mehr.");
+  }
   revalidatePath("/kunden");
 }

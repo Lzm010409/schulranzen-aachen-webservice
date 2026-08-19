@@ -52,8 +52,15 @@ export async function recordAudit(input: {
         ip,
       },
     })
-    // Ein fehlgeschlagenes Protokoll darf die fachliche Aktion nicht kippen.
-    .catch((error) => {
-      console.error("Audit-Eintrag konnte nicht geschrieben werden", error);
+    // Ein fehlgeschlagenes Protokoll darf die fachliche Aktion nicht kippen —
+    // aber es darf auch nicht spurlos bleiben.
+    .catch(async (error) => {
+      const { log } = await import("./log");
+      await log.error({
+        source: "protokoll",
+        message: `Änderungsprotokoll konnte nicht geschrieben werden (${input.entity}, ${input.action})`,
+        error,
+        userId: input.userId,
+      });
     });
 }

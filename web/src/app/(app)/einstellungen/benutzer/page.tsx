@@ -115,6 +115,15 @@ export default async function UsersPage({
                 <Td className="muted">{formatDateTime(user.lastLoginAt)}</Td>
                 <Td>
                   <div className="toolbar" style={{ justifyContent: "flex-end" }}>
+                    {/* Direkter Weg zu allem, was diese Person angelegt oder
+                        geaendert hat — sonst muesste man im Protokoll erst den
+                        Namen heraussuchen. */}
+                    <a
+                      href={`/einstellungen/protokoll?benutzer=${user.id}`}
+                      className="btn btn-tertiary"
+                    >
+                      Protokoll
+                    </a>
                     <UserEditor
                       trigger="Bearbeiten"
                       user={{

@@ -23,6 +23,8 @@ const schema = z.object({
     .default("true")
     .transform((v) => v !== "false" && v !== "0"),
   MAIL_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),
+  /// Wie lange Eintraege im Anwendungsprotokoll stehen bleiben.
+  LOG_RETENTION_DAYS: z.coerce.number().int().positive().default(90),
 });
 
 let cached: z.infer<typeof schema> | null = null;

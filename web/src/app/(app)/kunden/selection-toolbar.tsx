@@ -209,15 +209,19 @@ export function SelectionToolbar({
   return (
     <div ref={containerRef}>
       <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md bg-slate-50 px-3 py-2">
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            className="size-4 rounded border-slate-300"
-            checked={allOnPageSelected}
-            onChange={(e) => setAllOnPage(e.target.checked)}
-          />
-          Seite auswählen
-        </label>
+        {/* Ohne Zeilen gibt es nichts anzuhaken; der Zaehler und
+            „Auswahl aufheben" bleiben trotzdem stehen. */}
+        {ids.length > 0 ? (
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="size-4 rounded border-slate-300"
+              checked={allOnPageSelected}
+              onChange={(e) => setAllOnPage(e.target.checked)}
+            />
+            Seite auswählen
+          </label>
+        ) : null}
 
         {allOnPageSelected && total > ids.length ? (
           <button

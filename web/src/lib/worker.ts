@@ -12,6 +12,7 @@ import {
 } from "./mailer";
 import { renderEmail, renderPlaceholders } from "./template";
 import { buildCustomerVars } from "./mail-vars";
+import { log, raeumeProtokollAuf } from "./log";
 
 /**
  * Versand-Worker.
@@ -42,6 +43,9 @@ type ClaimedJob = {
 
 let running = false;
 let timer: NodeJS.Timeout | null = null;
+/** Wann zuletzt aufgeraeumt wurde; das muss nicht bei jedem Durchlauf sein. */
+let letzteAufraeumung = 0;
+const AUFRAEUMEN_ALLE_MS = 60 * 60 * 1000;
 
 export function startWorker(): void {
   if (timer || !env().MAIL_WORKER_ENABLED) return;
@@ -50,7 +54,7 @@ export function startWorker(): void {
   }, TICK_MS);
   // Der Worker soll den Prozess nicht am Beenden hindern.
   timer.unref?.();
-  console.info("[worker] Versand-Worker gestartet");
+  void log.info({ source: "worker", message: "Versand-Worker gestartet" });
 }
 
 export function stopWorker(): void {
@@ -68,6 +72,8 @@ export async function tick(): Promise<number> {
   if (running) return 0;
   running = true;
   try {
+    await aufraeumenWennFaellig();
+
     const jobs = await claimJobs(batchSize());
     if (jobs.length === 0) {
       await finishCompletedCampaigns();
@@ -90,10 +96,41 @@ export async function tick(): Promise<number> {
     await finishCompletedCampaigns();
     return jobs.length;
   } catch (error) {
-    console.error("[worker] Durchlauf fehlgeschlagen", error);
+    await log.error({
+      source: "worker",
+      message: "Durchlauf fehlgeschlagen",
+      error,
+    });
     return 0;
   } finally {
     running = false;
+  }
+}
+
+/**
+ * Haengt sich an den Takt des Workers, statt einen zweiten Zeitgeber zu
+ * starten: der Worker laeuft ohnehin, und ein eigener Prozess waere fuer ein
+ * DELETE pro Stunde nicht zu rechtfertigen.
+ */
+async function aufraeumenWennFaellig(): Promise<void> {
+  if (Date.now() - letzteAufraeumung < AUFRAEUMEN_ALLE_MS) return;
+  letzteAufraeumung = Date.now();
+  try {
+    const tage = env().LOG_RETENTION_DAYS;
+    const entfernt = await raeumeProtokollAuf(tage);
+    if (entfernt > 0) {
+      await log.info({
+        source: "worker",
+        message: `${entfernt} Protokolleinträge älter als ${tage} Tage entfernt`,
+        context: { entfernt, tage },
+      });
+    }
+  } catch (error) {
+    await log.warn({
+      source: "worker",
+      message: "Aufräumen des Anwendungsprotokolls fehlgeschlagen",
+      error,
+    });
   }
 }
 
@@ -151,7 +188,16 @@ async function processCampaignJobs(
   try {
     transport = createTransport(account);
   } catch (error) {
-    await failJobs(jobs, describeSmtpError(error));
+    const meldung = describeSmtpError(error);
+    await failJobs(jobs, meldung);
+    // Das trifft alle Empfaenger dieser Portion auf einmal — meist stimmt am
+    // Mailkonto etwas nicht. Ohne Eintrag sucht man den Grund in den
+    // einzelnen Jobs.
+    await log.error({
+      source: "mailer",
+      message: `Verbindung zum Mailkonto „${account.fromEmail}" fehlgeschlagen: ${meldung}`,
+      context: { kampagne: campaign.id, betroffeneJobs: jobs.length },
+    });
     return;
   }
 
@@ -237,6 +283,15 @@ async function sendOne(input: {
         where: { id: job.id },
         data: { status: "FAILED", attempts, error: message },
       });
+      await log.warn({
+        source: "mailer",
+        message: `Versand an ${job.to_email} endgültig fehlgeschlagen: ${message}`,
+        context: {
+          kampagne: campaign.id,
+          versuche: attempts,
+          grund: permanent ? "dauerhaft abgelehnt" : "Versuche erschöpft",
+        },
+      });
       // Dauerhaft abgelehnte Adressen werden markiert und kuenftig
       // uebersprungen, statt bei jeder Kampagne erneut zu scheitern.
       if (permanent && job.customer_id && /550|553|no such user|unknown/i.test(message)) {
@@ -305,7 +360,11 @@ export async function recoverStuckJobs(): Promise<number> {
     data: { status: "PENDING", nextAttemptAt: new Date() },
   });
   if (result.count > 0) {
-    console.info(`[worker] ${result.count} haengende Jobs zurueckgesetzt`);
+    await log.warn({
+      source: "worker",
+      message: `${result.count} hängengebliebene Versandaufträge zurückgesetzt`,
+      context: { anzahl: result.count },
+    });
   }
   return result.count;
 }

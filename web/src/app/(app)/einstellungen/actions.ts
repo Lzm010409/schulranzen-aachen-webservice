@@ -7,6 +7,7 @@ import { requireAdmin, requirePermission, requireUser } from "@/lib/auth";
 import { recordAudit } from "@/lib/audit";
 import { encryptSecret, hashPassword, verifyPassword } from "@/lib/crypto";
 import { flash } from "@/lib/flash";
+import { log } from "@/lib/log";
 import {
   createTransport,
   describeSmtpError,
@@ -261,7 +262,7 @@ export async function saveProviderAction(
 }
 
 export async function deleteProviderAction(formData: FormData): Promise<void> {
-  await requirePermission("mailkonten.verwalten");
+  const user = await requirePermission("mailkonten.verwalten");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const inUse = await db.mailAccount.count({ where: { providerId: id } });
@@ -275,8 +276,18 @@ export async function deleteProviderAction(formData: FormData): Promise<void> {
   }
 
   const removed = await db.provider.delete({ where: { id } }).catch(() => null);
-  if (removed) await flash.geloescht("Provider", removed.name);
-  else await flash.fehler("Den Provider gibt es nicht mehr.");
+  if (removed) {
+    await recordAudit({
+      userId: user.id,
+      entity: "Provider",
+      entityId: id,
+      action: "DELETE",
+      diff: { name: removed.name, host: removed.host },
+    });
+    await flash.geloescht("Provider", removed.name);
+  } else {
+    await flash.fehler("Den Provider gibt es nicht mehr.");
+  }
   revalidatePath("/einstellungen/mailkonten");
 }
 
@@ -353,7 +364,7 @@ export async function saveMailAccountAction(
 export async function verifyMailAccountAction(
   formData: FormData,
 ): Promise<void> {
-  await requirePermission("mailkonten.verwalten");
+  const user = await requirePermission("mailkonten.verwalten");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
@@ -378,8 +389,23 @@ export async function verifyMailAccountAction(
       `${account.provider.host}:${account.provider.port} nimmt die Anmeldung an.`,
     );
   } else {
+    // Eine gescheiterte Anmeldung am Postfach gehoert ins Anwendungsprotokoll:
+    // sie erklaert spaeter, warum ein Versand nicht anlief.
+    await log.warn({
+      source: "mailer",
+      message: `Verbindungsprüfung für „${account.fromEmail}" fehlgeschlagen: ${result.error}`,
+      context: { konto: id, host: account.provider.host, port: account.provider.port },
+      userId: user.id,
+    });
     await flash.fehler("Die Verbindung kam nicht zustande.", result.error);
   }
+  await recordAudit({
+    userId: user.id,
+    entity: "MailAccount",
+    entityId: id,
+    action: "UPDATE",
+    diff: { geprueft: result.ok ? "erfolgreich" : result.error },
+  });
   revalidatePath("/einstellungen/mailkonten");
 }
 
@@ -467,7 +493,7 @@ export async function sendAccountTestMailAction(
 export async function deleteMailAccountAction(
   formData: FormData,
 ): Promise<void> {
-  await requirePermission("mailkonten.verwalten");
+  const user = await requirePermission("mailkonten.verwalten");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const inUse = await db.campaign.count({ where: { accountId: id } });
@@ -482,7 +508,17 @@ export async function deleteMailAccountAction(
   const removed = await db.mailAccount
     .delete({ where: { id } })
     .catch(() => null);
-  if (removed) await flash.geloescht("Absenderkonto", removed.label);
-  else await flash.fehler("Das Konto gibt es nicht mehr.");
+  if (removed) {
+    await recordAudit({
+      userId: user.id,
+      entity: "MailAccount",
+      entityId: id,
+      action: "DELETE",
+      diff: { label: removed.label, absender: removed.fromEmail },
+    });
+    await flash.geloescht("Absenderkonto", removed.label);
+  } else {
+    await flash.fehler("Das Konto gibt es nicht mehr.");
+  }
   revalidatePath("/einstellungen/mailkonten");
 }

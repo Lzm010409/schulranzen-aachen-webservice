@@ -39,6 +39,7 @@ model User {
   campaigns  Campaign[]
   exportLogs ExportLog[]
   mailImages MailImage[]
+  appLogs    AppLog[]
 
   @@map("user")
 }
@@ -443,7 +444,51 @@ model AuditLog {
 
   @@index([entity, entityId])
   @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
   @@map("audit_log")
+}
+
+enum LogLevel {
+  /// Ablauf, der im Normalfall nicht interessiert.
+  INFO
+  /// Etwas ging schief, die Anwendung arbeitet aber weiter.
+  WARN
+  /// Etwas ist fehlgeschlagen und braucht Aufmerksamkeit.
+  ERROR
+}
+
+/// Anwendungsprotokoll.
+///
+/// Das Aenderungsprotokoll (`audit_log`) beantwortet „wer hat was getan".
+/// Diese Tabelle beantwortet „was hat die Anwendung selbst gemeldet" —
+/// fehlgeschlagene Versandversuche, abgebrochene Uebernahmen, Fehler beim
+/// Aufbau einer Seite. Im Altsystem stand davon nichts irgendwo; man sah nur,
+/// dass etwas nicht ankam.
+///
+/// Bewusst in der Datenbank und nicht nur auf der Konsole: die Ausgabe des
+/// Containers ist nach einem Neustart weg, und niemand liest sie.
+model AppLog {
+  id      String   @id @default(cuid())
+  level   LogLevel
+  /// Woher die Meldung kommt: "worker", "mailer", "import", "oberflaeche", …
+  source  String
+  message String
+  /// Zusatzangaben zum Einordnen, z. B. Kampagne, Empfaenger, Fehlerklasse.
+  context Json?
+  /// Aufrufliste, gekuerzt. Nur bei Fehlern gefuellt.
+  stack   String?
+
+  /// Wer die Aktion ausgeloest hat, soweit bekannt. Der Worker laeuft ohne.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([level, createdAt])
+  @@index([source, createdAt])
+  @@map("app_log")
 }
 
 model ExportLog {

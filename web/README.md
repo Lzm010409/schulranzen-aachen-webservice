@@ -258,6 +258,48 @@ und **jede Server Action und jede Seite prüft zusätzlich serverseitig**. Auf d
 Oberfläche allein verlässt sich nichts — der Katalog steht in
 `src/lib/permissions.ts`.
 
+## Protokoll
+
+Unter **Einstellungen → Protokoll** stehen zwei Bereiche.
+
+**Änderungen** beantwortet „wer hat wann was getan". Jede Server Action, die
+etwas schreibt, hinterlässt einen Eintrag mit Benutzer, IP, Objektart,
+Kennung und den tatsächlich geänderten Feldern (`von → auf`, nicht der ganze
+Datensatz). Anmeldung, fehlgeschlagene Anmeldung und Abmeldung kommen aus
+`src/lib/auth.ts` dazu.
+
+Gefiltert wird nach Benutzer, Aktion, Objektart, Zeitraum und Objekt-Kennung —
+alles gleichzeitig und alles in der Adresse, die Ansicht lässt sich also
+weitergeben. Der Weg des Administrators führt über
+**Einstellungen → Benutzer → Protokoll**: das ist derselbe Filter, direkt auf
+eine Person gesetzt. Ein Klick auf eine Objekt-Kennung zeigt alles, was mit
+diesem einen Datensatz passiert ist.
+
+Dass wirklich *jede* Änderung ankommt, hält
+[`protokoll-vollstaendigkeit.test.ts`](./src/lib/__tests__/protokoll-vollstaendigkeit.test.ts)
+fest: die Prüfung liest den Quelltext aller Server Actions und verlangt zu
+jeder einen `recordAudit`-Aufruf. Ausnahmen brauchen einen Eintrag samt
+Begründung — ein fehlender Protokolleintrag fällt sonst niemandem auf.
+
+**Anwendung** beantwortet „was hat die Anwendung selbst gemeldet": Versand-
+versuche, die endgültig scheiterten, Verbindungsprüfungen, die nicht
+durchkamen, abgebrochene Übernahmen, hängengebliebene Versandaufträge nach
+einem Neustart und Fehler beim Aufbau einer Seite. Gefiltert wird nach Ebene
+(Fehler · Warnung · Information), Quelle, Zeitraum und Text der Meldung; zu
+jedem Eintrag stehen Zusatzangaben und, bei Fehlern, die Aufrufliste.
+
+Geschrieben wird über `src/lib/log.ts`. Die Einträge landen zusätzlich auf der
+Konsole — wer beim Betrieb zusieht, soll nicht in die Oberfläche wechseln
+müssen. Umgekehrt reicht die Konsole allein nicht: ihre Ausgabe ist nach dem
+nächsten Neustart des Containers weg, und niemand liest sie.
+
+Aufgeräumt wird automatisch: der Versand-Worker löscht einmal pro Stunde, was
+älter ist als `LOG_RETENTION_DAYS` (Vorgabe 90 Tage). Ein Versandlauf mit
+mehreren tausend Empfängern kann sonst schnell tausende Zeilen hinterlassen.
+
+> Ein fehlgeschlagener Protokolleintrag kippt nie die Aktion, die ihn ausgelöst
+> hat. Er wird dann selbst gemeldet — im jeweils anderen Protokoll.
+
 ## Lokale Entwicklung
 
 ```bash
@@ -297,6 +339,8 @@ node scripts/pagination-check.mjs http://localhost:3000          # 24 Prüfungen
 node scripts/feedback-check.mjs http://localhost:3000            # 17 Prüfungen
 node scripts/auswahl-check.mjs http://localhost:3000             # 11 Prüfungen
 node scripts/bilder-check.mjs http://localhost:3000              # 13 Prüfungen
+node scripts/protokoll-check.mjs http://localhost:3000 \
+  postgresql://…/testdatenbank                                   # 15 Prüfungen
 node scripts/kategorie-check.mjs http://localhost:3000 \
   postgresql://…/testdatenbank                                   # 20 Prüfungen
 
@@ -335,6 +379,8 @@ src/
     pagination.ts     Seite und Seitengröße aus URL, Cookie und Vorgabe
     mail-check.ts     prüft Vorlagen auf das, woran Mailprogramme scheitern
     permissions.ts    Rechtekatalog, Vorlagen, abhängige Rechte
+    audit.ts          Änderungsprotokoll: wer hat was getan
+    log.ts            Anwendungsprotokoll: was die Anwendung meldet
     crypto.ts         Passwort-Hash (scrypt), AES-256-GCM
     queue.ts          Empfänger einreihen, Fortschritt, Wiederholung
     worker.ts         Versand-Worker (FOR UPDATE SKIP LOCKED)
@@ -355,6 +401,7 @@ scripts/
   feedback-check.mjs      prüft Rückmeldungen und Ladezustand
   auswahl-check.mjs       prüft, dass die Kundenauswahl das Blättern übersteht
   bilder-check.mjs        prüft die Bildablage für Mails
+  protokoll-check.mjs     prüft Änderungs- und Anwendungsprotokoll
   kategorie-check.mjs     prüft Warengruppen und Saison
   gross-check.mjs         Import mit 12.600 Zeilen am laufenden System
   vorlage-vorschau.ts     rendert eine Vorlage wie beim Versand

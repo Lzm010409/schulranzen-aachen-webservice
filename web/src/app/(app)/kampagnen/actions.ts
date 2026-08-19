@@ -251,19 +251,33 @@ export async function startCampaignAction(formData: FormData): Promise<void> {
 }
 
 export async function pauseCampaignAction(formData: FormData): Promise<void> {
-  await requirePermission("kampagnen.senden");
+  const user = await requirePermission("kampagnen.senden");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.campaign.update({ where: { id }, data: { status: "PAUSED" } });
+  await recordAudit({
+    userId: user.id,
+    entity: "Campaign",
+    entityId: id,
+    action: "UPDATE",
+    diff: { status: { von: "SENDING", auf: "PAUSED" } },
+  });
   await flash.hinweis("Versand pausiert.", "Bereits begonnene Mails gehen noch hinaus.");
   revalidatePath(`/kampagnen/${id}`);
 }
 
 export async function resumeCampaignAction(formData: FormData): Promise<void> {
-  await requirePermission("kampagnen.senden");
+  const user = await requirePermission("kampagnen.senden");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   await db.campaign.update({ where: { id }, data: { status: "SENDING" } });
+  await recordAudit({
+    userId: user.id,
+    entity: "Campaign",
+    entityId: id,
+    action: "UPDATE",
+    diff: { status: { von: "PAUSED", auf: "SENDING" } },
+  });
   await flash.hinweis("Versand fortgesetzt.");
   revalidatePath(`/kampagnen/${id}`);
 }
@@ -299,11 +313,18 @@ export async function cancelCampaignAction(formData: FormData): Promise<void> {
 }
 
 export async function retryFailedAction(formData: FormData): Promise<void> {
-  await requirePermission("kampagnen.senden");
+  const user = await requirePermission("kampagnen.senden");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const count = await retryFailed(id);
   if (count > 0) {
+    await recordAudit({
+      userId: user.id,
+      entity: "Campaign",
+      entityId: id,
+      action: "SEND",
+      diff: { wiederholt: count },
+    });
     await flash.hinweis(`${count} Empfänger erneut eingereiht.`);
   } else {
     await flash.hinweis("Es gab nichts zu wiederholen.");
@@ -313,7 +334,7 @@ export async function retryFailedAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteCampaignAction(formData: FormData): Promise<void> {
-  await requirePermission("kampagnen.erstellen");
+  const user = await requirePermission("kampagnen.erstellen");
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const campaign = await db.campaign.findUnique({ where: { id } });
@@ -326,6 +347,13 @@ export async function deleteCampaignAction(formData: FormData): Promise<void> {
     redirect(`/kampagnen/${id}`);
   }
   await db.campaign.delete({ where: { id } });
+  await recordAudit({
+    userId: user.id,
+    entity: "Campaign",
+    entityId: id,
+    action: "DELETE",
+    diff: { name: campaign.name },
+  });
   await flash.geloescht("Kampagne", campaign.name);
   redirect("/kampagnen");
 }

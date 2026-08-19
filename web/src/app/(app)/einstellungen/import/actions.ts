@@ -20,6 +20,7 @@ import {
 } from "@/lib/import/customers";
 import { IMPORT_FIELDS, type ImportField } from "@/lib/import/table";
 import { flash } from "@/lib/flash";
+import { log } from "@/lib/log";
 
 const MAX_UPLOAD = 50 * 1024 * 1024;
 
@@ -125,6 +126,16 @@ export async function legacyImportAction(
       },
     };
   } catch (error) {
+    // Eine abgebrochene Uebernahme ist der Fall, bei dem man spaeter am
+    // ehesten wissen will, was genau schiefging — die Meldung im Formular ist
+    // nach dem naechsten Klick weg.
+    await log.error({
+      source: "import",
+      message: "Übernahme aus dem Altsystem abgebrochen",
+      error,
+      context: { quelle, trockenlauf: dryRun },
+      userId: user.id,
+    });
     return { error: (error as Error).message };
   } finally {
     if (tempDir) rmSync(tempDir, { recursive: true, force: true });

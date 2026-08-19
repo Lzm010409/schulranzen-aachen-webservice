@@ -136,19 +136,23 @@ export default async function CustomersPage({
       </div>
 
       <Card className="overflow-hidden">
-        {customers.length === 0 ? (
-          <p className="py-10 text-center text-sm text-slate-500">
-            {isEmptyFilter(filter)
-              ? "Es sind noch keine Kunden erfasst."
-              : "Keine Treffer für diesen Filter."}
-          </p>
-        ) : (
-          <SelectionToolbar
-            total={total}
-            filterQuery={exportParams.toString()}
-            ids={customers.map((c) => c.id)}
-            canCreateCampaign={can(user, "kampagnen.erstellen")}
-          >
+        {/* Die Auswahlleiste steht auch ueber einer leeren Trefferliste. Sonst
+            verschwindet mit der letzten Zeile auch die Anzeige der Auswahl —
+            und eine Suche ohne Treffer saehe genauso aus, als waere die
+            Auswahl weg. */}
+        <SelectionToolbar
+          total={total}
+          filterQuery={exportParams.toString()}
+          ids={customers.map((c) => c.id)}
+          canCreateCampaign={can(user, "kampagnen.erstellen")}
+        >
+          {customers.length === 0 ? (
+            <p className="py-10 text-center text-sm text-slate-500">
+              {isEmptyFilter(filter)
+                ? "Es sind noch keine Kunden erfasst."
+                : "Keine Treffer für diesen Filter."}
+            </p>
+          ) : (
             <Table>
               <thead>
                 <tr>
@@ -236,8 +240,8 @@ export default async function CustomersPage({
                 ))}
               </tbody>
             </Table>
-          </SelectionToolbar>
-        )}
+          )}
+        </SelectionToolbar>
       </Card>
 
       <Pagination
